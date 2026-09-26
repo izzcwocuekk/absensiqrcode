@@ -10,8 +10,12 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../config/config.php';
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/modules/auth/guard.php';
+require_once ROOT_PATH . '/modules/learning/functions.php';
 
-require_login();
+require_staff();
+if (learning_tables_ready(db())) {
+    redirect((current_user()['role'] ?? '') === 'guru' ? 'modules/learning/index.php' : 'modules/learning/admin.php');
+}
 
 $pageTitle = 'Absensi Siswa';
 $activeMenu = 'scan';

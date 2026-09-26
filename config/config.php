@@ -19,7 +19,7 @@ if (is_file(ROOT_PATH . '/config/config.local.php')) {
 }
 
 if (!defined('APP_NAME')) {
-    define('APP_NAME', $GLOBALS['APP_LOCAL_OVERRIDE']['APP_NAME'] ?? 'SMK Tritech Informatika Medan');
+    define('APP_NAME', $GLOBALS['APP_LOCAL_OVERRIDE']['APP_NAME'] ?? 'Sistem Absensi Pembelajaran Sekolah');
 }
 if (!defined('BASE_URL')) {
     define('BASE_URL', $GLOBALS['APP_LOCAL_OVERRIDE']['BASE_URL'] ?? '/absensi-siswa-qrcode');

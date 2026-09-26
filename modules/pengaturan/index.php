@@ -22,6 +22,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $schoolAddress = trim((string) ($_POST['school_address'] ?? ''));
     $startTime = trim((string) ($_POST['school_start_time'] ?? '07:00'));
     $lateAfter = trim((string) ($_POST['late_after'] ?? '07:00'));
+    $schoolLat = trim((string) ($_POST['school_latitude'] ?? ''));
+    $schoolLng = trim((string) ($_POST['school_longitude'] ?? ''));
+    $radius = max(1, (int) ($_POST['location_radius_m'] ?? 150));
+    $requireLocation = isset($_POST['require_school_location']) ? 1 : 0;
 
     if ($schoolName === '') {
         set_flash_message('danger', 'Nama sekolah wajib diisi.');
@@ -33,7 +37,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $upd = db()->prepare(
                 'UPDATE attendance_settings 
-                 SET school_name = :sname, school_address = :saddr, school_start_time = :stime, late_after = :lafter
+                 SET school_name = :sname, school_address = :saddr, school_start_time = :stime, late_after = :lafter,
+                     school_latitude = :lat, school_longitude = :lng, location_radius_m = :radius,
+                     require_school_location = :required
                  WHERE id = :id'
             );
             $upd->execute([
@@ -41,6 +47,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':saddr' => $schoolAddress,
                 ':stime' => $formattedStartTime,
                 ':lafter' => $formattedLateAfter,
+                ':lat' => $schoolLat === '' ? null : (float) $schoolLat,
+                ':lng' => $schoolLng === '' ? null : (float) $schoolLng,
+                ':radius' => $radius,
+                ':required' => $requireLocation,
                 ':id' => (int) ($settings['id'] ?? 1),
             ]);
 
@@ -110,6 +120,16 @@ require ROOT_PATH . '/include/sidebar.php';
                                         value="<?= e(substr((string) ($settings['late_after'] ?? '07:00:00'), 0, 5)) ?>">
                                     <small class="text-muted" style="font-size: 0.72rem;">Scan lewat jam ini otomatis berstatus Terlambat.</small>
                                 </div>
+                            </div>
+
+                            <div class="border rounded-3 p-3 mb-4 bg-light-subtle">
+                                <h3 class="h6 fw-bold mb-2"><i class="bi bi-geo-alt me-1 text-primary"></i>Validasi Lokasi Guru</h3>
+                                <div class="row g-2">
+                                    <div class="col-md-4"><label class="form-label small" for="school_latitude">Latitude</label><input class="form-control" id="school_latitude" name="school_latitude" type="number" step="any" value="<?=e($settings['school_latitude']??'')?>"></div>
+                                    <div class="col-md-4"><label class="form-label small" for="school_longitude">Longitude</label><input class="form-control" id="school_longitude" name="school_longitude" type="number" step="any" value="<?=e($settings['school_longitude']??'')?>"></div>
+                                    <div class="col-md-4"><label class="form-label small" for="location_radius_m">Radius (meter)</label><input class="form-control" id="location_radius_m" name="location_radius_m" type="number" min="1" value="<?=e($settings['location_radius_m']??150)?>"></div>
+                                </div>
+                                <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="require_school_location" name="require_school_location" value="1" <?=!empty($settings['require_school_location'])?'checked':''?>><label class="form-check-label small" for="require_school_location">Wajib berada di dalam radius sekolah saat membuka sesi</label></div>
                             </div>
 
                             <div class="d-flex justify-content-end">

@@ -51,3 +51,5 @@ kehadiran harian. Dibangun bertahap Fase 03–09 mengikuti `DOCS/PRD.md`.
 Prepared statement semua query, `e()` semua echo, `password_hash()`,
 guard login + role, CSRF token semua form POST, upload foto JPG/PNG max
 2MB + cek MIME, nama file disanitasi, session httponly + samesite Lax.
+
+Langkah tambahan: import `database/learning_schema.sql` terlebih dahulu bila belum dijalankan, kemudian jalankan importer roster di atas.

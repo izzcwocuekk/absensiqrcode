@@ -11,6 +11,7 @@ require_once __DIR__ . '/config/config.php';
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/modules/auth/guard.php';
 require_once ROOT_PATH . '/include/qrcode_helper.php';
+require_once ROOT_PATH . '/modules/learning/functions.php';
 
 require_login();
 
@@ -19,6 +20,13 @@ $userRole = (string) ($user['role'] ?? 'guru');
 $isAdmin = $userRole === 'admin';
 $isGuru = $userRole === 'guru';
 $isSiswa = $userRole === 'siswa';
+
+// Guru menggunakan dashboard jadwal berbasis roster; admin dan siswa tetap
+// menggunakan dashboard lama agar fitur yang sudah ada tetap kompatibel.
+if ($isGuru && learning_tables_ready(db())) {
+    require ROOT_PATH . '/modules/learning/index.php';
+    exit;
+}
 
 $pageTitle = 'Dashboard Absensi';
 $activeMenu = 'dashboard';
@@ -98,6 +106,33 @@ if ($isSiswa) {
         $stmtH = $pdo->prepare('SELECT * FROM attendances WHERE student_id = :sid ORDER BY tanggal DESC LIMIT 7');
         $stmtH->execute([':sid' => $effectiveStudentId]);
         $myHistory = $stmtH->fetchAll();
+
+        // Portal siswa juga membaca catatan per sesi pembelajaran jika
+        // migration roster sudah dijalankan.
+        if (learning_tables_ready($pdo)) {
+            $stmtSession = $pdo->prepare(
+                'SELECT x.date tanggal, ar.check_in_time jam_masuk, ar.status, ar.notes keterangan,
+                        c.nama_kelas, sub.nama_mata_pelajaran, x.lesson_number
+                 FROM attendance_records ar
+                 JOIN attendance_sessions x ON x.id = ar.session_id
+                 JOIN classes c ON c.id = x.class_id
+                 JOIN subjects sub ON sub.id = x.subject_id
+                 WHERE ar.student_id = :student_id
+                 ORDER BY x.date DESC, ar.id DESC LIMIT 30'
+            );
+            $stmtSession->execute([':student_id' => (int) $studentData['id']]);
+            $sessionHistory = $stmtSession->fetchAll();
+            if ($sessionHistory !== []) {
+                $myHistory = $sessionHistory;
+                $todayAttendance = null;
+                foreach ($sessionHistory as $sessionRow) {
+                    if ((string) $sessionRow['tanggal'] === $tanggal) {
+                        $todayAttendance = $sessionRow;
+                        break;
+                    }
+                }
+            }
+        }
     }
 } else {
     // ==========================================
@@ -186,7 +221,8 @@ require ROOT_PATH . '/include/sidebar.php';
                         <?php if ($todayAttendance): ?>
                             <?php 
                                 $st = (string) $todayAttendance['status'];
-                                $badgeClass = ($st === 'Terlambat') ? 'badge-terlambat' : (($st === 'Hadir') ? 'badge-hadir' : 'badge-izin');
+                                $stLabel = strtoupper($st) === 'ALPA' ? 'Alfa' : ucfirst(strtolower($st));
+                                $badgeClass = match (strtoupper($st)) { 'HADIR' => 'badge-hadir', 'TERLAMBAT' => 'badge-terlambat', 'IZIN' => 'badge-izin', 'SAKIT' => 'badge-sakit', default => 'badge-alfa' };
                             ?>
                             <div class="my-auto py-3">
                                 <div class="rounded-circle bg-success-subtle text-success mx-auto d-inline-grid place-items-center mb-2" style="width: 56px; height: 56px;">
@@ -198,11 +234,11 @@ require ROOT_PATH . '/include/sidebar.php';
                                 <div class="p-3 bg-light rounded-3 d-inline-block border text-start mx-auto" style="min-width: 200px;">
                                     <div class="d-flex justify-content-between mb-1">
                                         <span class="text-secondary small">Jam Masuk:</span>
-                                        <span class="fw-bold font-monospace small text-dark"><?= e(substr((string) $todayAttendance['jam_masuk'], 0, 5)) ?> WIB</span>
+                                <span class="fw-bold font-monospace small text-dark"><?= e(strlen((string)$todayAttendance['jam_masuk']) > 10 ? substr((string)$todayAttendance['jam_masuk'], 11, 5) : substr((string)$todayAttendance['jam_masuk'], 0, 5)) ?> WIB</span>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center">
                                         <span class="text-secondary small">Status:</span>
-                                        <span class="badge <?= $badgeClass ?>"><?= e($st) ?></span>
+                                        <span class="badge <?= $badgeClass ?>"><?= e($stLabel) ?></span>
                                     </div>
                                 </div>
                             </div>
@@ -222,7 +258,7 @@ require ROOT_PATH . '/include/sidebar.php';
                     <div class="card card-modern h-100 p-4 text-center">
                         <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
                             <h2 class="h6 fw-bold text-dark mb-0">Kartu QR Code Saya</h2>
-                            <span class="badge bg-light text-secondary border font-monospace">X RPL 1</span>
+                            <span class="badge bg-light text-secondary border font-monospace"><?=e($studentData['nama_kelas']??'Kelas')?></span>
                         </div>
 
                         <?php if ($studentData): ?>
@@ -280,13 +316,14 @@ require ROOT_PATH . '/include/sidebar.php';
                                         <?php foreach ($myHistory as $hist): ?>
                                             <?php 
                                                 $st = (string) $hist['status'];
-                                                $badgeClass = ($st === 'Terlambat') ? 'badge-terlambat' : (($st === 'Hadir') ? 'badge-hadir' : 'badge-alfa');
+                                                $stLabel = strtoupper($st) === 'ALPA' ? 'Alfa' : ucfirst(strtolower($st));
+                                                $badgeClass = match (strtoupper($st)) { 'HADIR' => 'badge-hadir', 'TERLAMBAT' => 'badge-terlambat', 'IZIN' => 'badge-izin', 'SAKIT' => 'badge-sakit', default => 'badge-alfa' };
                                             ?>
                                             <tr>
                                                 <td data-label="Nama" class="fw-semibold text-dark"><?= e($studentData['nama'] ?? 'Saya') ?></td>
-                                                <td data-label="Kelas"><span class="badge bg-light text-dark border">X RPL 1</span></td>
-                                                <td data-label="Jam" class="font-monospace small"><?= e($hist['jam_masuk'] ? substr((string) $hist['jam_masuk'], 0, 5) . ' WIB' : '-') ?></td>
-                                                <td data-label="Status"><span class="badge <?= $badgeClass ?>"><?= e($st) ?></span></td>
+                                                <td data-label="Kelas"><span class="badge bg-light text-dark border"><?=e($hist['nama_kelas']??$studentData['nama_kelas']??'-')?></span></td>
+                                                <td data-label="Jam" class="font-monospace small"><?= e($hist['jam_masuk'] ? (strlen((string)$hist['jam_masuk']) > 10 ? substr((string)$hist['jam_masuk'], 11, 5) : substr((string)$hist['jam_masuk'], 0, 5)) . ' WIB' : '-') ?></td>
+                                                <td data-label="Status"><span class="badge <?= $badgeClass ?>"><?= e($stLabel) ?></span></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php endif; ?>

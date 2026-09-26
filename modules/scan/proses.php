@@ -11,8 +11,9 @@ require_once __DIR__ . '/../../config/config.php';
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/modules/auth/guard.php';
 require_once ROOT_PATH . '/modules/scan/fungsi_scan.php';
+require_once ROOT_PATH . '/modules/learning/functions.php';
 
-require_login();
+require_staff();
 
 $isAjax = (!empty($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json')) ||
           (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
@@ -28,6 +29,32 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 require_csrf();
+
+if (learning_tables_ready(db()) && !isset($_POST['session_id'])) {
+    if ($isAjax) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'code' => 'SESSION_REQUIRED', 'pesan' => 'Pilih jadwal dan buka sesi absensi terlebih dahulu.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    set_flash_message('warning', 'Pilih jadwal dan buka sesi absensi terlebih dahulu.');
+    redirect('modules/learning/index.php');
+}
+
+// Absensi baru wajib berada di dalam attendance_session. Jalur lama tetap
+// tersedia untuk instalasi yang belum menjalankan learning_schema.sql.
+if (isset($_POST['session_id']) && (int) $_POST['session_id'] > 0) {
+    require_once ROOT_PATH . '/modules/learning/functions.php';
+    $sessionId = (int) $_POST['session_id'];
+    $hasilSession = record_session_attendance(db(), $sessionId, trim((string) ($_POST['kode'] ?? '')), 'HADIR');
+    $isAjaxSession = $isAjax;
+    if ($isAjaxSession) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => (bool) $hasilSession['ok'], 'code' => $hasilSession['code'] ?? 'ERROR', 'pesan' => $hasilSession['message'] ?? '', 'data' => $hasilSession['student'] ?? null], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    set_flash_message($hasilSession['ok'] ? 'success' : 'warning', $hasilSession['message'] ?? 'Permintaan selesai.');
+    redirect('modules/learning/session.php?id=' . $sessionId);
+}
 
 $kode = trim((string) ($_POST['kode'] ?? ''));
 $today = date('Y-m-d');

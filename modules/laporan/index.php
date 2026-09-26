@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../config/config.php';
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/modules/auth/guard.php';
 require_once ROOT_PATH . '/modules/laporan/fungsi_laporan.php';
+require_once ROOT_PATH . '/modules/learning/functions.php';
 
 require_staff();
 
@@ -13,9 +14,11 @@ $activeMenu = 'laporan';
 
 $filter = laporan_filter();
 $kelasList = db()->query('SELECT id, nama_kelas FROM classes ORDER BY nama_kelas')->fetchAll();
-[$rows, $ringkas] = laporan_data(db(), $filter['dari'], $filter['sampai'], $filter['kelas_id']);
+$teacherList = learning_tables_ready(db()) ? db()->query('SELECT id, nama FROM teachers WHERE is_active=1 ORDER BY nama')->fetchAll() : [];
+$subjectList = learning_tables_ready(db()) ? db()->query('SELECT id, nama_mata_pelajaran FROM subjects ORDER BY nama_mata_pelajaran')->fetchAll() : [];
+[$rows, $ringkas] = laporan_data(db(), $filter['dari'], $filter['sampai'], $filter['kelas_id'], $filter['teacher_id'], $filter['subject_id'], $filter['lesson_number'], $filter['status']);
 
-$qs = http_build_query(['dari' => $filter['dari'], 'sampai' => $filter['sampai'], 'kelas_id' => $filter['kelas_id']]);
+$qs = http_build_query($filter);
 
 require ROOT_PATH . '/include/header.php';
 require ROOT_PATH . '/include/navbar.php';
@@ -62,6 +65,22 @@ require ROOT_PATH . '/include/sidebar.php';
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label small fw-semibold text-secondary mb-1" for="teacher_id">Guru</label>
+                        <select class="form-select" id="teacher_id" name="teacher_id"><option value="0">Semua Guru</option><?php foreach ($teacherList as $teacher): ?><option value="<?=e((string)$teacher['id'])?>" <?=$filter['teacher_id']==(int)$teacher['id']?'selected':''?>><?=e($teacher['nama'])?></option><?php endforeach; ?></select>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label small fw-semibold text-secondary mb-1" for="subject_id">Mata Pelajaran</label>
+                        <select class="form-select" id="subject_id" name="subject_id"><option value="0">Semua Mata Pelajaran</option><?php foreach ($subjectList as $subject): ?><option value="<?=e((string)$subject['id'])?>" <?=$filter['subject_id']==(int)$subject['id']?'selected':''?>><?=e($subject['nama_mata_pelajaran'])?></option><?php endforeach; ?></select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1" for="lesson_number">Les</label>
+                        <select class="form-select" id="lesson_number" name="lesson_number"><option value="0">Semua Les</option><?php for($les=1;$les<=9;$les++): ?><option value="<?=$les?>" <?=$filter['lesson_number']==$les?'selected':''?>>Les <?=$les?></option><?php endfor; ?></select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1" for="status">Status</label>
+                        <select class="form-select" id="status" name="status"><option value="">Semua Status</option><?php foreach(['HADIR','IZIN','SAKIT','ALPA'] as $st): ?><option value="<?=$st?>" <?=$filter['status']===$st?'selected':''?>><?=$st?></option><?php endforeach; ?></select>
                     </div>
                     <div class="col-12 col-md-2">
                         <button class="btn btn-primary w-100" type="submit">
@@ -136,6 +155,9 @@ require ROOT_PATH . '/include/sidebar.php';
                             <th>NIS</th>
                             <th>Nama Siswa</th>
                             <th>Kelas</th>
+                            <th>Guru</th>
+                            <th>Mata Pelajaran</th>
+                            <th>Les</th>
                             <th>Jam Masuk</th>
                             <th>Status</th>
                             <th>Keterangan</th>
@@ -144,7 +166,7 @@ require ROOT_PATH . '/include/sidebar.php';
                     <tbody>
                         <?php if ($rows === []): ?>
                             <tr>
-                                <td colspan="9" class="empty-state">
+                                <td colspan="12" class="empty-state">
                                     <div class="empty-state-icon"><i class="bi bi-file-earmark-x"></i></div>
                                     <h3 class="h6 fw-bold text-dark mb-1">Tidak Ada Data Absensi</h3>
                                     <p class="text-secondary small mb-0">Tidak ditemukan catatan absensi pada periode dan kelas yang dipilih.</p>
@@ -167,8 +189,11 @@ require ROOT_PATH . '/include/sidebar.php';
                                     <td data-label="Kelas">
                                         <span class="badge bg-light text-dark border"><?= e($row['nama_kelas'] ?? '-') ?></span>
                                     </td>
+                                    <td data-label="Guru" class="small"><?=e($row['nama_guru']??'-')?></td>
+                                    <td data-label="Mata Pelajaran" class="small"><?=e($row['nama_mata_pelajaran']??'-')?></td>
+                                    <td data-label="Les" class="text-center"><?=e($row['lesson_number']??'-')?></td>
                                     <td data-label="Jam Masuk">
-                                        <?= $row['jam_masuk'] !== null ? '<span class="fw-semibold text-dark">' . e(substr((string) $row['jam_masuk'], 0, 5)) . ' WIB</span>' : '<span class="text-muted">-</span>' ?>
+                                        <?= $row['jam_masuk'] !== null ? '<span class="fw-semibold text-dark">' . e(strlen((string)$row['jam_masuk']) > 10 ? substr((string) $row['jam_masuk'], 11, 5) : substr((string) $row['jam_masuk'], 0, 5)) . ' WIB</span>' : '<span class="text-muted">-</span>' ?>
                                     </td>
                                     <td data-label="Status">
                                         <span class="badge badge-<?= strtolower((string) $row['status']) === 'alpa' ? 'alfa' : strtolower((string) $row['status']) ?>">

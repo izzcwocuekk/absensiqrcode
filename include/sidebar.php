@@ -49,7 +49,7 @@ $userInitial = mb_strtoupper(mb_substr($userName, 0, 1));
             </a>
 
             <?php if (!$isSiswa): ?>
-                <a class="nav-link <?= is_menu_active('scan', $activeMenu) ? 'active' : '' ?>" href="<?= e(base_url('modules/scan/index.php')) ?>">
+                <a class="nav-link <?= is_menu_active('scan', $activeMenu) ? 'active' : '' ?>" href="<?= e($isGuru ? base_url('modules/learning/index.php') : base_url('modules/scan/index.php')) ?>">
                     <i class="bi bi-qr-code-scan"></i>
                     <span>Absensi</span>
                 </a>
@@ -81,6 +81,12 @@ $userInitial = mb_strtoupper(mb_substr($userName, 0, 1));
             <hr class="my-2 border-secondary-subtle">
 
             <?php if ($isAdmin): ?>
+                <?php if (function_exists('learning_tables_ready') && function_exists('db') && learning_tables_ready(db())): ?>
+                <a class="nav-link <?= is_menu_active('learning_admin', $activeMenu) ? 'active' : '' ?>" href="<?= e(base_url('modules/learning/admin.php')) ?>">
+                    <i class="bi bi-calendar2-week"></i>
+                    <span>Guru & Jadwal</span>
+                </a>
+                <?php endif; ?>
                 <a class="nav-link <?= is_menu_active('pengaturan', $activeMenu) ? 'active' : '' ?>" href="<?= e(base_url('modules/pengaturan/index.php')) ?>">
                     <i class="bi bi-gear"></i>
                     <span>Pengaturan</span>
