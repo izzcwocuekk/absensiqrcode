@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/../../config/config.php'; require_once ROOT_PATH . '/config/database.php'; require_once ROOT_PATH . '/modules/auth/guard.php'; require_role('admin');
+require_once ROOT_PATH . '/modules/learning/functions.php';
 $pdo=db(); $action=(string)($_POST['action']??'');
 if($_SERVER['REQUEST_METHOD']==='POST'){require_csrf();try{
     if($action==='teacher'){ $nama=trim((string)$_POST['nama']);$username=trim((string)$_POST['username']);if($nama===''||$username==='')throw new RuntimeException('Nama dan username guru wajib diisi.');$u=$pdo->prepare('INSERT INTO users (nama,username,email,password,role) VALUES (?,?,?,?,"guru")');$password=trim((string)($_POST['password']??'')) ?: 'guru123';$u->execute([$nama,$username,$username.'@guru.local',password_hash($password,PASSWORD_DEFAULT)]);$pdo->prepare('INSERT INTO teachers (user_id,nama,nip) VALUES (?,?,?)')->execute([(int)$pdo->lastInsertId(),$nama,trim((string)($_POST['nip']??''))]);}

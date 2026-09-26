@@ -6,6 +6,29 @@ function learning_tables_ready(PDO $pdo): bool
     try { return (bool) $pdo->query("SHOW TABLES LIKE 'attendance_sessions'")->fetchColumn(); } catch (Throwable) { return false; }
 }
 
+function duty_roster_ready(PDO $pdo): bool
+{
+    try { return (bool) $pdo->query("SHOW TABLES LIKE 'teacher_duty_rosters'")->fetchColumn(); } catch (Throwable) { return false; }
+}
+
+function teacher_duty_rosters(PDO $pdo, int $teacherId = 0, ?string $date = null): array
+{
+    if (!duty_roster_ready($pdo)) return [];
+    $where = ['d.status = "ACTIVE"']; $params = [];
+    if ($teacherId > 0) { $where[] = 'd.teacher_id = :teacher_id'; $params[':teacher_id'] = $teacherId; }
+    if ($date !== null && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        $day = learning_day_name(strtotime($date));
+        $where[] = '(d.duty_date = :duty_date OR (d.duty_date IS NULL AND d.day = :duty_day))';
+        $params[':duty_date'] = $date; $params[':duty_day'] = $day;
+    }
+    $q = $pdo->prepare('SELECT d.*, t.nama AS nama_guru, t.nip
+        FROM teacher_duty_rosters d JOIN teachers t ON t.id = d.teacher_id
+        WHERE ' . implode(' AND ', $where) . '
+        ORDER BY COALESCE(d.duty_date, "9999-12-31"), d.start_time, t.nama');
+    $q->execute($params);
+    return $q->fetchAll();
+}
+
 function learning_day_name(?int $timestamp = null): string
 {
     return ['Sunday'=>'Minggu','Monday'=>'Senin','Tuesday'=>'Selasa','Wednesday'=>'Rabu','Thursday'=>'Kamis','Friday'=>'Jumat','Saturday'=>'Sabtu'][date('l', $timestamp ?? time())] ?? 'Senin';

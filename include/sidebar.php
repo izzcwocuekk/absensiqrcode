@@ -77,6 +77,13 @@ $userInitial = mb_strtoupper(mb_substr($userName, 0, 1));
                 </a>
             <?php endif; ?>
 
+            <?php if (($isGuru || $isAdmin) && function_exists('learning_tables_ready') && function_exists('db') && learning_tables_ready(db())): ?>
+                <a class="nav-link <?= is_menu_active('duty_roster', $activeMenu) ? 'active' : '' ?>" href="<?= e(base_url('modules/learning/duty.php')) ?>">
+                    <i class="bi bi-person-workspace"></i>
+                    <span>Roster Piket</span>
+                </a>
+            <?php endif; ?>
+
             <!-- Separator -->
             <hr class="my-2 border-secondary-subtle">
 
