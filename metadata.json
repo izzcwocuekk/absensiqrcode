@@ -1,0 +1,10 @@
+{
+  "name": "Absensi Siswa QR",
+  "description": "Aplikasi Absensi Siswa berbasis QR Code dengan manajemen kelas, siswa, pencatatan absensi otomatis, kartu pelajar QR, dan laporan rekapitulasi presensi.",
+  "requestFramePermissions": [
+    "android.permission.CAMERA"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
