@@ -42,6 +42,9 @@ CREATE TABLE IF NOT EXISTS schedules (
 
 CREATE TABLE IF NOT EXISTS attendance_sessions (
     id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    -- Token acak yang dicetak menjadi QR khusus satu sesi pembelajaran.
+    -- Nullable agar migrasi instalasi lama tetap aman; sesi baru selalu mengisinya.
+    session_token VARCHAR(64) NULL,
     schedule_id BIGINT UNSIGNED NOT NULL,
     teacher_id BIGINT UNSIGNED NOT NULL,
     class_id INT UNSIGNED NOT NULL,
@@ -56,6 +59,7 @@ CREATE TABLE IF NOT EXISTS attendance_sessions (
     location_verified TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_session_schedule_date (schedule_id, date),
+    UNIQUE KEY uq_session_token (session_token),
     INDEX idx_session_date (date, class_id),
     CONSTRAINT fk_session_schedule FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE RESTRICT,
     CONSTRAINT fk_session_teacher FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE RESTRICT,
@@ -77,6 +81,21 @@ CREATE TABLE IF NOT EXISTS attendance_records (
     CONSTRAINT fk_record_session FOREIGN KEY (session_id) REFERENCES attendance_sessions(id) ON DELETE CASCADE,
     CONSTRAINT fk_record_student FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Tambahkan token sesi pada instalasi yang sudah lebih dahulu membuat tabel.
+SET @session_token_col := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'attendance_sessions'
+      AND COLUMN_NAME = 'session_token'
+);
+SET @session_token_sql := IF(
+    @session_token_col = 0,
+    'ALTER TABLE attendance_sessions ADD COLUMN session_token VARCHAR(64) NULL AFTER id, ADD UNIQUE KEY uq_session_token (session_token)',
+    'SELECT 1'
+);
+PREPARE session_token_stmt FROM @session_token_sql;
+EXECUTE session_token_stmt;
+DEALLOCATE PREPARE session_token_stmt;
 
 -- Roster piket guru berdiri terpisah dari jadwal mengajar.
 -- duty_date dipakai untuk piket tanggal tertentu; day dapat dipakai untuk

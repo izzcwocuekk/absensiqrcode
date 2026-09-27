@@ -19,7 +19,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Username dan password wajib diisi.';
     } else {
         try {
-            $stmt = db()->prepare('SELECT id, username, password AS password_hash, nama, role, student_id FROM users WHERE username = :username LIMIT 1');
+            $pdo = db();
+            $hasStudentId = (bool) $pdo->query("SHOW COLUMNS FROM users LIKE 'student_id'")->fetchColumn();
+            $studentColumn = $hasStudentId ? ', student_id' : '';
+            $stmt = $pdo->prepare('SELECT id, username, password AS password_hash, nama, role' . $studentColumn . ' FROM users WHERE username = :username LIMIT 1');
             $stmt->execute([':username' => $username]);
             $user = $stmt->fetch();
 

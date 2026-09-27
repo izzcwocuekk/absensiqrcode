@@ -91,13 +91,14 @@ $days = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
 $dayBases = [7,17,27,37,47,54];
 $slotStart = ['07:00:00','07:45:00','08:30:00','09:15:00','10:00:00','10:45:00','11:30:00','12:15:00','13:00:00'];
 $slotEnd   = ['07:45:00','08:30:00','09:15:00','10:00:00','10:45:00','11:30:00','12:15:00','13:00:00','13:45:00'];
-$teacherStmt = $pdo->prepare('SELECT id FROM teachers WHERE nama = ? LIMIT 1');
+$teacherStmt = $pdo->prepare('SELECT id, user_id FROM teachers WHERE nama = ? LIMIT 1');
 $classStmt = $pdo->prepare('SELECT id FROM classes WHERE nama_kelas = ? LIMIT 1');
 $subjectStmt = $pdo->prepare('SELECT id FROM subjects WHERE nama_mata_pelajaran = ? LIMIT 1');
 $scheduleStmt = $pdo->prepare('INSERT IGNORE INTO schedules (teacher_id,class_id,subject_id,day,start_time,end_time,lesson_number,source_sheet) VALUES (?,?,?,?,?,?,?,?)');
-$count = ['teachers'=>0,'classes'=>0,'subjects'=>0,'schedules'=>0];
+$count = ['teachers'=>0,'classes'=>0,'subjects'=>0,'schedules'=>0,'sheets'=>0];
 
 foreach ($workbook->sheets->sheet as $sheet) {
+    $count['sheets']++;
     $sheetName = (string) $sheet['name'];
     $rid = (string) $sheet->attributes('r', true)->id;
     $rows = xlsx_rows($zip, $relMap[$rid] ?? '', $shared);
@@ -109,7 +110,8 @@ foreach ($workbook->sheets->sheet as $sheet) {
         if ($teacher === '' || $teacher === 'MATA PELAJARAN UMUM' || $teacher === 'MATA PELAJARAN KEJURUAN') continue;
         if ($subjectCell !== '' && !in_array(strtoupper($subjectCell), ['MATA PELAJARAN UMUM','MATA PELAJARAN KEJURUAN','MATA PELAJARAN PILIHAN','MUATAN LOKAL'], true)) $subject = preg_replace('/\s+/', ' ', str_replace("\n", ' ', $subjectCell)) ?? $subjectCell;
         if ($subject === '' || $grade === '' || !in_array($grade, ['X','XI','XII'], true)) continue;
-        $teacherStmt->execute([$teacher]); $teacherId = (int) ($teacherStmt->fetchColumn() ?: 0);
+        $teacherStmt->execute([$teacher]); $teacherRow = $teacherStmt->fetch() ?: null;
+        $teacherId = (int) ($teacherRow['id'] ?? 0);
         if ($teacherId === 0) {
             $username = slug_username($teacher); $base = $username; $i = 2;
             while (true) { $q = $pdo->prepare('SELECT id FROM users WHERE username = ?'); $q->execute([$username]); if (!$q->fetchColumn()) break; $username = $base . $i++; }
@@ -117,6 +119,14 @@ foreach ($workbook->sheets->sheet as $sheet) {
             $u->execute([$teacher,$username,$username.'@guru.local',password_hash('guru123', PASSWORD_DEFAULT)]);
             $teacherInsert = $pdo->prepare('INSERT INTO teachers (user_id,nama) VALUES (?,?)'); $teacherInsert->execute([(int)$pdo->lastInsertId(),$teacher]);
             $teacherId = (int) $pdo->lastInsertId(); $count['teachers']++;
+        } elseif (empty($teacherRow['user_id'])) {
+            // Data guru lama mungkin sudah ada tanpa akun login. Buat akun
+            // dengan username yang sama seperti guru baru lalu hubungkan.
+            $username = slug_username($teacher); $base = $username; $i = 2;
+            while (true) { $q = $pdo->prepare('SELECT id FROM users WHERE username = ?'); $q->execute([$username]); if (!$q->fetchColumn()) break; $username = $base . $i++; }
+            $u = $pdo->prepare('INSERT INTO users (nama,username,email,password,role) VALUES (?,?,?,?,\'guru\')');
+            $u->execute([$teacher,$username,$username.'@guru.local',password_hash('guru123', PASSWORD_DEFAULT)]);
+            $pdo->prepare('UPDATE teachers SET user_id=? WHERE id=?')->execute([(int)$pdo->lastInsertId(),$teacherId]);
         }
         $subjectStmt->execute([$subject]); $subjectId = (int) ($subjectStmt->fetchColumn() ?: 0);
         if ($subjectId === 0) { $s = $pdo->prepare('INSERT INTO subjects (nama_mata_pelajaran) VALUES (?)'); $s->execute([$subject]); $subjectId = (int) $pdo->lastInsertId(); $count['subjects']++; }

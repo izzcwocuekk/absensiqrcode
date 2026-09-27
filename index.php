@@ -71,34 +71,15 @@ if ($isSiswa) {
     // LOGIKA DASHBOARD KHUSUS SISWA
     // Identifikasi unik siswa menggunakan student_id
     // ==========================================
-    $sid = (string) ($user['student_id'] ?? '');
-    $uname = (string) ($user['username'] ?? '');
-    $stmtS = $pdo->prepare(
-        'SELECT s.*, c.nama_kelas, c.jurusan, q.qr_code AS qr_code_val 
-         FROM students s 
-         LEFT JOIN classes c ON c.id = s.class_id
-         LEFT JOIN qr_codes q ON q.student_id = s.student_id
-         WHERE (s.student_id != \'\' AND s.student_id = :sid) 
-            OR s.student_id = (SELECT student_id FROM users WHERE username = :uname LIMIT 1)
-            OR s.nis = :uname2
-         LIMIT 1'
-    );
-    $stmtS->execute([
-        ':sid' => $sid,
-        ':uname' => $uname,
-        ':uname2' => $uname,
-    ]);
-    $studentData = $stmtS->fetch();
-
-    if (!$studentData && $uname === 'faiz.rpl1') {
-        $studentData = $pdo->query("SELECT s.*, c.nama_kelas, c.jurusan, q.qr_code AS qr_code_val FROM students s LEFT JOIN classes c ON c.id = s.class_id LEFT JOIN qr_codes q ON q.student_id = s.student_id WHERE s.student_id = 'STU009' LIMIT 1")->fetch();
-    }
+    $studentData = current_student($pdo, $user);
+    if ($studentData) $studentData['qr_code_val'] = $studentData['qr_code'] ?? $studentData['qr_token'] ?? null;
 
     $todayAttendance = null;
     $myHistory = [];
 
     if ($studentData) {
-        $effectiveStudentId = (string) ($studentData['student_id'] ?? $sid);
+        $hasStudentId = (bool) $pdo->query("SHOW COLUMNS FROM students LIKE 'student_id'")->fetchColumn();
+        $effectiveStudentId = $hasStudentId ? (string) ($studentData['student_id'] ?? '') : (int) $studentData['id'];
         $stmtCek = $pdo->prepare('SELECT * FROM attendances WHERE student_id = :sid AND tanggal = :tgl LIMIT 1');
         $stmtCek->execute([':sid' => $effectiveStudentId, ':tgl' => $tanggal]);
         $todayAttendance = $stmtCek->fetch();
@@ -173,14 +154,13 @@ if ($isSiswa) {
     $alfaRate = $totalSiswa > 0 ? round(($alfaCount / $totalSiswa) * 100, 1) : 0.0;
 
     // Absensi Terbaru Hari Ini dari Database
+    $hasStudentId = (bool) $pdo->query("SHOW COLUMNS FROM students LIKE 'student_id'")->fetchColumn();
+    $studentIdExpr = $hasStudentId ? 's.student_id' : "CONCAT('STU',LPAD(s.id,3,'0'))";
+    $studentJoin = $hasStudentId ? '(s.student_id = a.student_id OR s.id = a.student_id)' : 's.id = a.student_id';
     $stmtRecent = $pdo->prepare(
-        'SELECT a.*, s.student_id, s.nis, s.nama, s.foto, c.nama_kelas
-         FROM attendances a
-         JOIN students s ON (s.student_id = a.student_id OR s.id = a.student_id)
-         LEFT JOIN classes c ON c.id = s.class_id
-         WHERE a.tanggal = :tgl
-         ORDER BY a.id DESC 
-         LIMIT 10'
+        'SELECT a.*, ' . $studentIdExpr . ' AS student_id, s.nis, s.nama, s.foto, c.nama_kelas
+         FROM attendances a JOIN students s ON ' . $studentJoin . ' LEFT JOIN classes c ON c.id = s.class_id
+         WHERE a.tanggal = :tgl ORDER BY a.id DESC LIMIT 10'
     );
     $stmtRecent->execute([':tgl' => $tanggal]);
     $recentScans = $stmtRecent->fetchAll();

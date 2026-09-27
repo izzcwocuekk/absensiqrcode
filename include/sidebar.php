@@ -58,6 +58,11 @@ $userInitial = mb_strtoupper(mb_substr($userName, 0, 1));
                     <i class="bi bi-people"></i>
                     <span>Data Siswa</span>
                 </a>
+            <?php else: ?>
+                <a class="nav-link <?= is_menu_active('student_scan', $activeMenu) ? 'active' : '' ?>" href="<?= e(base_url('modules/learning/student_scan.php')) ?>">
+                    <i class="bi bi-qr-code-scan"></i>
+                    <span>Scan QR Sesi</span>
+                </a>
             <?php endif; ?>
 
             <a class="nav-link <?= is_menu_active('qr_siswa', $activeMenu) ? 'active' : '' ?>" href="<?= e(base_url('modules/siswa/qr_management.php')) ?>">
@@ -78,6 +83,10 @@ $userInitial = mb_strtoupper(mb_substr($userName, 0, 1));
             <?php endif; ?>
 
             <?php if (($isGuru || $isAdmin) && function_exists('learning_tables_ready') && function_exists('db') && learning_tables_ready(db())): ?>
+                <a class="nav-link <?= is_menu_active('teacher_attendance', $activeMenu) ? 'active' : '' ?>" href="<?= e(base_url('modules/learning/teacher_attendance.php')) ?>">
+                    <i class="bi bi-person-check"></i>
+                    <span><?= $isAdmin ? 'Rekap Absen Guru' : 'Absen Mengajar' ?></span>
+                </a>
                 <a class="nav-link <?= is_menu_active('duty_roster', $activeMenu) ? 'active' : '' ?>" href="<?= e(base_url('modules/learning/duty.php')) ?>">
                     <i class="bi bi-person-workspace"></i>
                     <span>Roster Piket</span>

@@ -20,23 +20,16 @@ function catat_scan(PDO $pdo, string $kode, string $nowDate, string $nowTime): a
         ];
     }
 
-    // 1. Validasi Token / Cari Siswa (melalui student_id, qr_code, token QR, atau NIS)
-    $stmt = $pdo->prepare(
-        'SELECT s.*, c.nama_kelas, c.jurusan 
-         FROM students s 
-         LEFT JOIN classes c ON c.id = s.class_id
-         LEFT JOIN qr_codes q ON q.student_id = s.student_id
-         WHERE s.student_id = :k1 OR s.qr_code = :k2 OR s.qr_token = :k3 OR s.nis = :k4 OR q.qr_code = :k5
-         LIMIT 1'
-    );
-    $stmt->execute([
-        ':k1' => $kode,
-        ':k2' => $kode,
-        ':k3' => $kode,
-        ':k4' => $kode,
-        ':k5' => $kode,
-    ]);
-    $siswa = $stmt->fetch();
+    // 1. Validasi token memakai resolver yang kompatibel dengan schema dasar
+    // maupun migration student_id/qr_code. Fallback dipakai bila fungsi
+    // learning belum dimuat pada instalasi lama.
+    if (function_exists('resolve_student')) {
+        $siswa = resolve_student($pdo, $kode);
+    } else {
+        $stmt = $pdo->prepare('SELECT s.*, c.nama_kelas, c.jurusan FROM students s LEFT JOIN classes c ON c.id=s.class_id WHERE s.id=:id OR s.qr_token=:token OR s.nis=:nis LIMIT 1');
+        $stmt->execute([':id' => ctype_digit($kode) ? (int) $kode : 0, ':token' => $kode, ':nis' => $kode]);
+        $siswa = $stmt->fetch() ?: null;
+    }
 
     if (!$siswa) {
         return [
@@ -47,6 +40,7 @@ function catat_scan(PDO $pdo, string $kode, string $nowDate, string $nowTime): a
     }
 
     // Gunakan student_id sebagai identifier utama
+    if (function_exists('learning_normalize_student')) $siswa = learning_normalize_student($pdo, $siswa);
     $targetStudentId = !empty($siswa['student_id']) ? (string) $siswa['student_id'] : (string) $siswa['id'];
 
     // 2. Cek apakah siswa berstatus aktif
