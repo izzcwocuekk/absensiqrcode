@@ -1,10 +1,21 @@
 :root {
-    /* Palet Warna Utama: Biru Sekolah (School Blue) */
-    --app-primary: #1d4ed8;
-    --app-primary-hover: #1e40af;
-    --app-primary-active: #172554;
-    --app-primary-light: #eff6ff;
-    --app-primary-border: #bfdbfe;
+    /* TriTech brand tokens: green signal + magenta orbit from the logo */
+    --brand-primary: #007a3d;
+    --brand-secondary: #8f2d6b;
+    --brand-accent: #b94c8d;
+    --brand-background: #f5f8f6;
+    --brand-surface: #ffffff;
+    --brand-text: #17231d;
+    --brand-muted: #627168;
+    --brand-success: #16834b;
+    --brand-warning: #b7791f;
+    --brand-error: #c53b4a;
+
+    --app-primary: var(--brand-primary);
+    --app-primary-hover: #005f2f;
+    --app-primary-active: #004d26;
+    --app-primary-light: #e5f4eb;
+    --app-primary-border: #b9ddc7;
 
     /* Warna Status Presensi */
     --app-success: #059669;
@@ -33,8 +44,8 @@
     --app-muted: #64748b;
     --app-surface: #ffffff;
     --app-border: #e2e8f0;
-    --app-border-focus: #93c5fd;
-    --app-bg: #f8fafc;
+    --app-border-focus: #55a879;
+    --app-bg: var(--brand-background);
 
     /* Shadow & Radius Tipis Sesuai Arahan */
     --app-shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
@@ -131,7 +142,7 @@ body {
 
 .form-control:focus, .form-select:focus {
     border-color: var(--app-border-focus);
-    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
+    box-shadow: 0 0 0 3px rgba(0, 122, 61, 0.16);
 }
 
 /* Navbar */
@@ -222,7 +233,7 @@ body {
 .sidebar-search-box:focus-within {
     border-color: var(--app-primary);
     background: #ffffff;
-    box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.1);
+    box-shadow: 0 0 0 2px rgba(0, 122, 61, 0.1);
 }
 .sidebar-search-box i {
     color: #94a3b8;
@@ -254,7 +265,7 @@ body {
     border-radius: 10px;
     padding: 0.65rem 1rem;
     font-size: 0.88rem;
-    box-shadow: 0 1px 3px rgba(29, 78, 216, 0.25);
+    box-shadow: 0 1px 3px rgba(0, 122, 61, 0.25);
 }
 
 .sidebar-label {
@@ -296,7 +307,7 @@ body {
     color: #ffffff !important;
     background-color: var(--app-primary) !important;
     font-weight: 600;
-    box-shadow: 0 1px 3px rgba(29, 78, 216, 0.25);
+    box-shadow: 0 1px 3px rgba(0, 122, 61, 0.25);
 }
 
 .app-sidebar .nav-link.active i.bi {
@@ -604,7 +615,7 @@ body {
     background: var(--app-primary);
     color: #ffffff;
     border-color: var(--app-primary);
-    box-shadow: 0 2px 4px rgba(29, 78, 216, 0.25);
+    box-shadow: 0 2px 4px rgba(0, 122, 61, 0.25);
 }
 .week-day-name {
     font-size: 0.68rem;

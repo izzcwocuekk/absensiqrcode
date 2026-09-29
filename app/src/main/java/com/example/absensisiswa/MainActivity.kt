@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -69,6 +70,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -90,6 +92,7 @@ import com.example.absensisiswa.ui.screens.TeacherSessionScreen
 import com.example.absensisiswa.ui.theme.AbsensiSiswaQRTheme
 import com.example.absensisiswa.ui.theme.BorderLight
 import com.example.absensisiswa.ui.theme.PrimaryBlue
+import com.example.absensisiswa.R
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -226,30 +229,21 @@ fun MainAppScaffold(viewModel: MainViewModel) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(PrimaryBlue),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Default.School,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
+                            Image(
+                                painter = painterResource(R.drawable.tritech_logo),
+                                contentDescription = "Logo TriTech",
+                                modifier = Modifier.size(42.dp)
+                            )
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = "SMK TRITECH",
+                                    text = "TRITECH",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 15.sp,
                                     color = Color(0xFF0F172A)
                                 )
                                 Text(
-                                    text = "Informatika Medan",
+                                    text = "School Attendance System",
                                     fontSize = 11.sp,
                                     color = Color(0xFF64748B)
                                 )
@@ -382,24 +376,15 @@ fun MainAppScaffold(viewModel: MainViewModel) {
                     },
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(PrimaryBlue),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Default.School,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
+                            Image(
+                                painter = painterResource(R.drawable.tritech_logo),
+                                contentDescription = "Logo TriTech",
+                                modifier = Modifier.size(36.dp)
+                            )
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = "SMK TRITECH",
+                                    text = "TRITECH",
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 15.sp
@@ -407,7 +392,7 @@ fun MainAppScaffold(viewModel: MainViewModel) {
                                     color = Color(0xFF0F172A)
                                 )
                                 Text(
-                                    text = "Informatika Medan",
+                                    text = "School Attendance System",
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         fontSize = 11.sp
                                     ),

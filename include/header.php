@@ -10,7 +10,7 @@ $schoolName = $appSettings['school_name'] ?? 'SMK TRITECH INFORMATIKA MEDAN';
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#ffffff">
+    <meta name="theme-color" content="#007a3d">
     <meta name="description" content="Sistem Informasi Absensi Siswa Berbasis QR Code - <?= e($schoolName) ?>">
     
     <title><?= e(page_title($pageTitle)) ?></title>
