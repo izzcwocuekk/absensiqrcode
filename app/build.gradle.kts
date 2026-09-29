@@ -11,10 +11,10 @@ android {
 
     defaultConfig {
         applicationId = "com.aistudio.absensisiswa.qrvxkp"
-        minSdk = 26
-        targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        minSdk = 24
+        targetSdk = 35
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -25,6 +25,8 @@ android {
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
+            enableV1Signing = true
+            enableV2Signing = true
         }
     }
 
@@ -33,6 +35,7 @@ android {
             signingConfig = signingConfigs.getByName("debugConfig")
         }
         release {
+            signingConfig = signingConfigs.getByName("debugConfig")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

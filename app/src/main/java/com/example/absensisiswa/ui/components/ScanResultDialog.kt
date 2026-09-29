@@ -1,6 +1,8 @@
 package com.example.absensisiswa.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +23,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -31,16 +34,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.absensisiswa.R
 import com.example.absensisiswa.data.ScanResult
-import com.example.absensisiswa.ui.theme.PrimaryBlue
-import com.example.absensisiswa.ui.theme.StatusGreen
-import com.example.absensisiswa.ui.theme.StatusOrange
-import com.example.absensisiswa.ui.theme.StatusRed
+import com.example.absensisiswa.ui.theme.BrandBorder
+import com.example.absensisiswa.ui.theme.BrandGreen
+import com.example.absensisiswa.ui.theme.BrandGreenContainer
+import com.example.absensisiswa.ui.theme.BrandGreenDark
+import com.example.absensisiswa.ui.theme.BrandMagenta
+import com.example.absensisiswa.ui.theme.BrandMuted
+import com.example.absensisiswa.ui.theme.BrandSurface
+import com.example.absensisiswa.ui.theme.BrandText
+import com.example.absensisiswa.ui.theme.BrandTextSecondary
+import com.example.absensisiswa.ui.theme.BrandSuccess
+import com.example.absensisiswa.ui.theme.BrandSuccessBg
+import com.example.absensisiswa.ui.theme.BrandWarning
+import com.example.absensisiswa.ui.theme.BrandWarningBg
+import com.example.absensisiswa.ui.theme.BrandError
+import com.example.absensisiswa.ui.theme.BrandErrorBg
 
 @Composable
 fun ScanResultDialog(
@@ -50,27 +66,48 @@ fun ScanResultDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
+                .fillMaxWidth(0.94f)
                 .clip(RoundedCornerShape(24.dp))
                 .testTag("scan_result_dialog"),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 8.dp
+            color = BrandSurface,
+            tonalElevation = 6.dp,
+            border = androidx.compose.foundation.BorderStroke(1.dp, BrandBorder)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
+                    .padding(22.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 when (result) {
                     is ScanResult.Success -> {
                         val isLate = result.status.equals("Terlambat", ignoreCase = true)
-                        val iconColor = if (isLate) StatusOrange else StatusGreen
-                        val bgColor = if (isLate) Color(0xFFFEF3C7) else Color(0xFFDCFCE7)
+                        val iconColor = if (isLate) BrandWarning else BrandSuccess
+                        val bgColor = if (isLate) BrandWarningBg else BrandSuccessBg
+
+                        // TriTech Branding mini header
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.tritech_logo),
+                                contentDescription = "Logo TriTech",
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "TRITECH ATTENDANCE",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = BrandGreenDark,
+                                letterSpacing = 1.sp
+                            )
+                        }
 
                         Box(
                             modifier = Modifier
-                                .size(72.dp)
+                                .size(64.dp)
                                 .clip(CircleShape)
                                 .background(bgColor),
                             contentAlignment = Alignment.Center
@@ -79,109 +116,83 @@ fun ScanResultDialog(
                                 Icons.Default.CheckCircle,
                                 contentDescription = null,
                                 tint = iconColor,
-                                modifier = Modifier.size(44.dp)
+                                modifier = Modifier.size(38.dp)
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
-                            text = if (isLate) "Absensi Terlambat!" else "Presensi Berhasil!",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = iconColor
+                            text = "✓ ABSENSI BERHASIL",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = iconColor,
+                            letterSpacing = 0.5.sp
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
                             text = result.message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp,
+                            color = BrandTextSecondary,
                             textAlign = TextAlign.Center
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Student Details Card
+                        // Required Structured Details:
+                        // Nama, Kelas, Mata Pelajaran, Les, Jam
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
+                            shape = RoundedCornerShape(14.dp),
+                            color = Color(0xFFF8FAFC),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BrandBorder)
                         ) {
-                            Row(
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                StudentAvatar(
-                                    name = result.student.student.nama,
-                                    gender = result.student.student.jenisKelamin,
-                                    size = 48
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = result.student.student.nama,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = "NIS: ${result.student.student.nis} • ${result.student.classEntity?.namaKelas ?: "-"}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Row(
-                                        modifier = Modifier.padding(top = 4.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        StatusBadge(status = result.status)
-                                        Text(
-                                            text = result.jam,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
+                                ResultDetailRow(label = "Nama", value = result.student.student.nama, isBold = true)
+                                ResultDetailRow(label = "Kelas", value = result.student.classEntity?.namaKelas ?: "X RPL 1")
+                                ResultDetailRow(label = "Mata Pelajaran", value = "Presensi Harian / Sekolah")
+                                ResultDetailRow(label = "Les", value = "Les 1 (Pagi)")
+                                ResultDetailRow(label = "Jam", value = result.jam, highlightColor = BrandGreen)
                             }
                         }
 
-                        // Geolocation Verification Info in Success Dialog
-                        if (result.distanceFromSchool != null) {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = Color(0xFFF0FDF4),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBBF7D0)),
-                                modifier = Modifier.fillMaxWidth()
+                        // Simplified Geolocation info (Section 12)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = BrandGreenContainer,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        Icons.Default.LocationOn,
-                                        contentDescription = null,
-                                        tint = Color(0xFF16A34A),
-                                        modifier = Modifier.size(18.dp)
+                                Icon(
+                                    Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = BrandGreen,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Column {
+                                    Text(
+                                        text = "📍 Lokasi Terverifikasi",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = BrandGreenDark
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column {
-                                        Text(
-                                            text = "✓ Lokasi Terverifikasi di Area Sekolah",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF15803D)
-                                        )
-                                        Text(
-                                            text = "Jarak: ${result.distanceFromSchool.toInt()} m • Akurasi: ±${result.accuracy?.toInt() ?: 8} m",
-                                            fontSize = 11.sp,
-                                            color = Color(0xFF16A34A)
-                                        )
-                                    }
+                                    Text(
+                                        text = "Anda berada di area sekolah",
+                                        fontSize = 11.sp,
+                                        color = BrandGreenDark.copy(alpha = 0.8f)
+                                    )
                                 }
                             }
                         }
@@ -190,263 +201,188 @@ fun ScanResultDialog(
                     is ScanResult.LocationRejected -> {
                         Box(
                             modifier = Modifier
-                                .size(72.dp)
+                                .size(64.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFFEE2E2)),
+                                .background(BrandErrorBg),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Default.LocationOff,
                                 contentDescription = null,
-                                tint = StatusRed,
-                                modifier = Modifier.size(44.dp)
+                                tint = BrandError,
+                                modifier = Modifier.size(38.dp)
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
-                            text = "Di Luar Area Sekolah",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = StatusRed
+                            text = "DI LUAR AREA SEKOLAH",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = BrandError
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
-                            text = "Absensi ditolak karena Anda terdeteksi berada di luar area sekolah.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = "Absensi tidak dapat dicatat karena posisi Anda terdeteksi di luar radius sekolah.",
+                            fontSize = 12.sp,
+                            color = BrandTextSecondary,
                             textAlign = TextAlign.Center
                         )
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // Distance & Radius Card
                         Surface(
-                            modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFFFF1F2),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFECDD3))
+                            color = BrandErrorBg,
+                            modifier = Modifier.fillMaxWidth(),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BrandError.copy(alpha = 0.3f))
                         ) {
                             Column(
                                 modifier = Modifier.padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = "📍 Jarak dari sekolah:",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color(0xFF9F1239)
-                                    )
-                                    Text(
-                                        text = "${result.distanceMeters?.toInt() ?: 0} meter",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF9F1239)
-                                    )
-                                }
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = "🎯 Radius maksimal:",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color(0xFFBE123C)
-                                    )
-                                    Text(
-                                        text = "${result.allowedRadiusMeters.toInt()} meter",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFBE123C)
-                                    )
-                                }
-                                if (result.accuracyMeters != null) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = "📡 Akurasi GPS:",
-                                            fontSize = 11.sp,
-                                            color = Color(0xFFE11D48)
-                                        )
-                                        Text(
-                                            text = "±${result.accuracyMeters.toInt()} meter",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = Color(0xFFE11D48)
-                                        )
-                                    }
-                                }
+                                Text(
+                                    text = "Status: DI LUAR AREA",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BrandError
+                                )
+                                Text(
+                                    text = "Silakan berada di dalam area sekolah untuk melakukan absensi.",
+                                    fontSize = 11.sp,
+                                    color = BrandError
+                                )
                             }
                         }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Text(
-                            text = "Anda harus berada di area sekolah untuk melakukan absensi.",
-                            fontSize = 12.sp,
-                            color = Color(0xFF64748B),
-                            textAlign = TextAlign.Center
-                        )
                     }
 
                     is ScanResult.AlreadyAttended -> {
                         Box(
                             modifier = Modifier
-                                .size(72.dp)
+                                .size(64.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFFEF3C7)),
+                                .background(BrandWarningBg),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Default.Warning,
                                 contentDescription = null,
-                                tint = StatusOrange,
-                                modifier = Modifier.size(44.dp)
+                                tint = BrandWarning,
+                                modifier = Modifier.size(38.dp)
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
-                            text = "Sudah Tercatat Hari Ini",
-                            style = MaterialTheme.typography.titleLarge,
+                            text = "SUDAH TERCATAT HARI INI",
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
-                            color = StatusOrange
+                            color = BrandWarning
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
                             text = result.message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp,
+                            color = BrandTextSecondary,
                             textAlign = TextAlign.Center
                         )
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFFF8FAFC),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BrandBorder)
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                StudentAvatar(
-                                    name = result.student.student.nama,
-                                    gender = result.student.student.jenisKelamin,
-                                    size = 48
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = result.student.student.nama,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = BrandText
                                 )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = result.student.student.nama,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = "NIS: ${result.student.student.nis} • ${result.student.classEntity?.namaKelas ?: "-"}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Row(
-                                        modifier = Modifier.padding(top = 4.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        StatusBadge(status = result.status)
-                                        Text(
-                                            text = result.jam,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
+                                Text(
+                                    text = "${result.student.classEntity?.namaKelas ?: "Kelas"} • NIS: ${result.student.student.nis}",
+                                    fontSize = 11.sp,
+                                    color = BrandMuted
+                                )
                             }
                         }
-                    }
-
-                    is ScanResult.StudentInactive -> {
-                        Box(
-                            modifier = Modifier
-                                .size(72.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFFEE2E2)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Error,
-                                contentDescription = null,
-                                tint = StatusRed,
-                                modifier = Modifier.size(44.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        Text(
-                            text = "Siswa Tidak Aktif",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = StatusRed
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                            text = result.message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
                     }
 
                     is ScanResult.NotFound -> {
                         Box(
                             modifier = Modifier
-                                .size(72.dp)
+                                .size(64.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFFEE2E2)),
+                                .background(BrandErrorBg),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Default.Error,
                                 contentDescription = null,
-                                tint = StatusRed,
-                                modifier = Modifier.size(44.dp)
+                                tint = BrandError,
+                                modifier = Modifier.size(38.dp)
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
-                            text = "QR Tidak Terdaftar",
-                            style = MaterialTheme.typography.titleLarge,
+                            text = "QR TIDAK TERDAFTAR",
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
-                            color = StatusRed
+                            color = BrandError
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
                             text = result.message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp,
+                            color = BrandTextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
+                    is ScanResult.StudentInactive -> {
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(BrandErrorBg),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Error,
+                                contentDescription = null,
+                                tint = BrandError,
+                                modifier = Modifier.size(38.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = "SISWA TIDAK AKTIF",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BrandError
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = result.message,
+                            fontSize = 12.sp,
+                            color = BrandTextSecondary,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -454,34 +390,34 @@ fun ScanResultDialog(
                     is ScanResult.Error -> {
                         Box(
                             modifier = Modifier
-                                .size(72.dp)
+                                .size(64.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFFEE2E2)),
+                                .background(BrandErrorBg),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Default.Error,
                                 contentDescription = null,
-                                tint = StatusRed,
-                                modifier = Modifier.size(44.dp)
+                                tint = BrandError,
+                                modifier = Modifier.size(38.dp)
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
-                            text = "Peringatan",
-                            style = MaterialTheme.typography.titleLarge,
+                            text = "PERINGATAN ABSENSI",
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
-                            color = StatusRed
+                            color = BrandError
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
                             text = result.message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp,
+                            color = BrandTextSecondary,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -497,7 +433,7 @@ fun ScanResultDialog(
                         .testTag("dismiss_scan_result_button"),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (result is ScanResult.LocationRejected) StatusRed else PrimaryBlue
+                        containerColor = if (result is ScanResult.LocationRejected) BrandError else BrandGreen
                     )
                 ) {
                     Text(
@@ -506,12 +442,38 @@ fun ScanResultDialog(
                             is ScanResult.Success -> "Selesai"
                             else -> "Tutup"
                         },
-                        style = MaterialTheme.typography.labelLarge,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ResultDetailRow(
+    label: String,
+    value: String,
+    isBold: Boolean = false,
+    highlightColor: Color? = null
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = BrandMuted
+        )
+        Text(
+            text = value,
+            fontSize = 12.sp,
+            fontWeight = if (isBold) FontWeight.Bold else FontWeight.SemiBold,
+            color = highlightColor ?: BrandText
+        )
     }
 }

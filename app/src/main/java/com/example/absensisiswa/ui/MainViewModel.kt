@@ -72,6 +72,18 @@ class MainViewModel(
     private val todayString = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
     val todayDayName: String = SimpleDateFormat("EEEE", Locale("id", "ID")).format(Date())
 
+    private val _isSplashScreenVisible = MutableStateFlow(true)
+    val isSplashScreenVisible: StateFlow<Boolean> = _isSplashScreenVisible.asStateFlow()
+
+    private val _isLoggedIn = MutableStateFlow(false)
+    val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
+
+    private val _isLoggingIn = MutableStateFlow(false)
+    val isLoggingIn: StateFlow<Boolean> = _isLoggingIn.asStateFlow()
+
+    private val _loginError = MutableStateFlow<String?>(null)
+    val loginError: StateFlow<String?> = _loginError.asStateFlow()
+
     private val _currentScreen = MutableStateFlow(AppScreen.DASHBOARD)
     val currentScreen: StateFlow<AppScreen> = _currentScreen.asStateFlow()
 
@@ -756,6 +768,73 @@ class MainViewModel(
         }
     }
 
+    fun dismissSplashScreen() {
+        _isSplashScreenVisible.value = false
+    }
+
+    fun login(usernameInput: String, passwordInput: String, onResult: (Boolean) -> Unit = {}) {
+        val trimmedUser = usernameInput.trim()
+        val trimmedPass = passwordInput.trim()
+
+        if (trimmedUser.isEmpty()) {
+            _loginError.value = "Username tidak boleh kosong"
+            onResult(false)
+            return
+        }
+        if (trimmedPass.isEmpty()) {
+            _loginError.value = "Password tidak boleh kosong"
+            onResult(false)
+            return
+        }
+
+        _isLoggingIn.value = true
+        _loginError.value = null
+
+        viewModelScope.launch {
+            // Check in repository database
+            val userFromDb = repository.getUserByUsername(trimmedUser)
+
+            val matchedUser: UserEntity? = if (userFromDb != null) {
+                if (userFromDb.password == trimmedPass) userFromDb else null
+            } else {
+                // Fallback for standard demo accounts if DB not yet seeded or different
+                when (trimmedUser.lowercase()) {
+                    "admin" -> if (trimmedPass == "admin123" || trimmedPass == "admin") {
+                        UserEntity(id = 1, username = "admin", password = "admin123", nama = "Administrator", role = "admin")
+                    } else null
+                    "guru" -> if (trimmedPass == "guru123" || trimmedPass == "guru") {
+                        UserEntity(id = 2, username = "guru", password = "guru123", nama = "Aditya Pratama, S.Kom (Pak Adit)", role = "guru", teacherId = 1)
+                    } else null
+                    "siswa" -> if (trimmedPass == "siswa123" || trimmedPass == "siswa") {
+                        UserEntity(id = 3, username = "siswa", password = "siswa123", nama = "FAIZ DHABIT HARFANDA MANURUNG", role = "siswa", studentId = 9)
+                    } else null
+                    else -> null
+                }
+            }
+
+            _isLoggingIn.value = false
+
+            if (matchedUser != null) {
+                _currentUser.value = matchedUser
+                _isLoggedIn.value = true
+                _loginError.value = null
+                _currentScreen.value = AppScreen.DASHBOARD
+                _snackbarMessage.value = "Selamat datang, ${matchedUser.nama}!"
+                onResult(true)
+            } else {
+                _loginError.value = "Username atau password salah. Periksa kembali akun Anda."
+                onResult(false)
+            }
+        }
+    }
+
+    fun logout() {
+        _isLoggedIn.value = false
+        _loginError.value = null
+        _currentScreen.value = AppScreen.DASHBOARD
+        _snackbarMessage.value = "Anda telah keluar dari akun."
+    }
+
     fun switchUserRole(role: String) {
         val user = when (role) {
             "admin" -> UserEntity(id = 1, username = "admin", password = "admin123", nama = "Administrator", role = "admin")
@@ -763,6 +842,9 @@ class MainViewModel(
             else -> UserEntity(id = 3, username = "siswa", password = "siswa123", nama = "FAIZ DHABIT HARFANDA MANURUNG", role = "siswa", studentId = 9)
         }
         _currentUser.value = user
+        _isLoggedIn.value = true
+        _loginError.value = null
+        _currentScreen.value = AppScreen.DASHBOARD
         _snackbarMessage.value = "Masuk sebagai: ${user.nama} (${user.role.uppercase()})"
     }
 

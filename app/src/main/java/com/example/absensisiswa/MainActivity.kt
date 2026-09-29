@@ -6,8 +6,12 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,10 +24,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.AssignmentTurnedIn
@@ -79,20 +83,29 @@ import com.example.absensisiswa.ui.MainViewModel
 import com.example.absensisiswa.ui.screens.ClassListScreen
 import com.example.absensisiswa.ui.screens.DashboardScreen
 import com.example.absensisiswa.ui.screens.LaporanScreen
+import com.example.absensisiswa.ui.screens.LoginScreen
 import com.example.absensisiswa.ui.screens.PresensiScreen
 import com.example.absensisiswa.ui.screens.ProfileScreen
 import com.example.absensisiswa.ui.screens.QrSiswaScreen
 import com.example.absensisiswa.ui.screens.ScanScreen
 import com.example.absensisiswa.ui.screens.SettingsScreen
+import com.example.absensisiswa.ui.screens.SplashScreen
 import com.example.absensisiswa.ui.screens.StudentListScreen
 import com.example.absensisiswa.ui.screens.SubjectManagementScreen
 import com.example.absensisiswa.ui.screens.TeacherManagementScreen
 import com.example.absensisiswa.ui.screens.TeacherScheduleScreen
 import com.example.absensisiswa.ui.screens.TeacherSessionScreen
 import com.example.absensisiswa.ui.theme.AbsensiSiswaQRTheme
-import com.example.absensisiswa.ui.theme.BorderLight
-import com.example.absensisiswa.ui.theme.PrimaryBlue
-import com.example.absensisiswa.R
+import com.example.absensisiswa.ui.theme.BrandBorder
+import com.example.absensisiswa.ui.theme.BrandGreen
+import com.example.absensisiswa.ui.theme.BrandGreenContainer
+import com.example.absensisiswa.ui.theme.BrandGreenDark
+import com.example.absensisiswa.ui.theme.BrandMagenta
+import com.example.absensisiswa.ui.theme.BrandMagentaContainer
+import com.example.absensisiswa.ui.theme.BrandMuted
+import com.example.absensisiswa.ui.theme.BrandSurface
+import com.example.absensisiswa.ui.theme.BrandText
+import com.example.absensisiswa.ui.theme.BrandTextSecondary
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -107,7 +120,18 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             AbsensiSiswaQRTheme {
-                MainAppScaffold(viewModel = viewModel)
+                val isSplashScreenVisible by viewModel.isSplashScreenVisible.collectAsState()
+                val isLoggedIn by viewModel.isLoggedIn.collectAsState()
+
+                if (isSplashScreenVisible) {
+                    SplashScreen(
+                        onTimeout = { viewModel.dismissSplashScreen() }
+                    )
+                } else if (!isLoggedIn) {
+                    LoginScreen(viewModel = viewModel)
+                } else {
+                    MainAppScaffold(viewModel = viewModel)
+                }
             }
         }
     }
@@ -117,8 +141,7 @@ data class BottomBarItem(
     val id: String,
     val title: String,
     val icon: ImageVector,
-    val screen: AppScreen? = null,
-    val isMenuAction: Boolean = false
+    val screen: AppScreen
 )
 
 data class DrawerMenuItem(
@@ -153,39 +176,43 @@ fun MainAppScaffold(viewModel: MainViewModel) {
         }
     }
 
+    // Role-specific bottom navigation strictly following Section 14
     val bottomNavItems = when (currentUser.role) {
         "siswa" -> listOf(
-            BottomBarItem("dashboard", "Beranda", Icons.Default.Dashboard, AppScreen.DASHBOARD),
-            BottomBarItem("scan", "Absen", Icons.Default.QrCodeScanner, AppScreen.SCAN_QR),
+            BottomBarItem("home", "Home", Icons.Default.Dashboard, AppScreen.DASHBOARD),
+            BottomBarItem("jadwal", "Jadwal", Icons.Default.CalendarMonth, AppScreen.JADWAL_PELAJARAN),
             BottomBarItem("riwayat", "Riwayat", Icons.Default.Assignment, AppScreen.PRESENSI),
             BottomBarItem("profil", "Profil", Icons.Default.Person, AppScreen.PROFIL)
         )
         "guru" -> listOf(
-            BottomBarItem("dashboard", "Dashboard", Icons.Default.Dashboard, AppScreen.DASHBOARD),
+            BottomBarItem("home", "Home", Icons.Default.Dashboard, AppScreen.DASHBOARD),
             BottomBarItem("jadwal", "Jadwal", Icons.Default.CalendarMonth, AppScreen.JADWAL_PELAJARAN),
-            BottomBarItem("sesi", "Sesi", Icons.Default.AssignmentTurnedIn, AppScreen.SESI_ABSENSI),
+            BottomBarItem("absensi", "Absensi", Icons.Default.AssignmentTurnedIn, AppScreen.SESI_ABSENSI),
             BottomBarItem("riwayat", "Riwayat", Icons.Default.Assignment, AppScreen.PRESENSI),
-            BottomBarItem("menu", "Menu", Icons.Default.Menu, null, isMenuAction = true)
+            BottomBarItem("profil", "Profil", Icons.Default.Person, AppScreen.PROFIL)
         )
         else -> listOf(
-            BottomBarItem("dashboard", "Dashboard", Icons.Default.Dashboard, AppScreen.DASHBOARD),
-            BottomBarItem("jadwal", "Jadwal", Icons.Default.CalendarMonth, AppScreen.JADWAL_PELAJARAN),
-            BottomBarItem("scan", "Scan QR", Icons.Default.QrCodeScanner, AppScreen.SCAN_QR),
-            BottomBarItem("siswa", "Siswa", Icons.Default.People, AppScreen.DATA_SISWA),
-            BottomBarItem("menu", "Menu", Icons.Default.Menu, null, isMenuAction = true)
+            BottomBarItem("home", "Home", Icons.Default.Dashboard, AppScreen.DASHBOARD),
+            BottomBarItem("absensi", "Absensi", Icons.Default.AssignmentTurnedIn, AppScreen.SESI_ABSENSI),
+            BottomBarItem("data", "Data", Icons.Default.People, AppScreen.DATA_SISWA),
+            BottomBarItem("laporan", "Laporan", Icons.Default.Assessment, AppScreen.LAPORAN),
+            BottomBarItem("profil", "Profil", Icons.Default.Person, AppScreen.PROFIL)
         )
     }
 
+    // Role-filtered drawer menu items
     val drawerMenuItems = when (currentUser.role) {
         "siswa" -> listOf(
             DrawerMenuItem("Beranda Siswa", Icons.Default.Dashboard, AppScreen.DASHBOARD),
-            DrawerMenuItem("Scan Presensi", Icons.Default.QrCodeScanner, AppScreen.SCAN_QR),
-            DrawerMenuItem("Riwayat Kehadiran", Icons.Default.Assignment, AppScreen.PRESENSI),
+            DrawerMenuItem("Jadwal Pelajaran", Icons.Default.CalendarMonth, AppScreen.JADWAL_PELAJARAN),
+            DrawerMenuItem("Scan Presensi QR", Icons.Default.QrCodeScanner, AppScreen.SCAN_QR),
+            DrawerMenuItem("Riwayat Presensi", Icons.Default.Assignment, AppScreen.PRESENSI),
+            DrawerMenuItem("Kartu Pelajar QR", Icons.Default.QrCode, AppScreen.QR_SISWA),
             DrawerMenuItem("Profil Saya", Icons.Default.Person, AppScreen.PROFIL)
         )
         "guru" -> listOf(
             DrawerMenuItem("Dashboard Mengajar", Icons.Default.Dashboard, AppScreen.DASHBOARD),
-            DrawerMenuItem("Jadwal Pelajaran", Icons.Default.CalendarMonth, AppScreen.JADWAL_PELAJARAN),
+            DrawerMenuItem("Jadwal Mengajar", Icons.Default.CalendarMonth, AppScreen.JADWAL_PELAJARAN),
             DrawerMenuItem("Sesi Absensi Kelas", Icons.Default.AssignmentTurnedIn, AppScreen.SESI_ABSENSI),
             DrawerMenuItem("Scan QR Siswa", Icons.Default.QrCodeScanner, AppScreen.SCAN_QR),
             DrawerMenuItem("Riwayat Absensi", Icons.Default.Assignment, AppScreen.PRESENSI),
@@ -193,13 +220,13 @@ fun MainAppScaffold(viewModel: MainViewModel) {
         )
         else -> listOf(
             DrawerMenuItem("Dashboard Utama", Icons.Default.Dashboard, AppScreen.DASHBOARD),
-            DrawerMenuItem("Data Guru", Icons.Default.Person, AppScreen.DATA_GURU),
+            DrawerMenuItem("Sesi Absensi Guru", Icons.Default.AssignmentTurnedIn, AppScreen.SESI_ABSENSI),
+            DrawerMenuItem("Scan QR Presensi", Icons.Default.QrCodeScanner, AppScreen.SCAN_QR),
             DrawerMenuItem("Data Siswa", Icons.Default.People, AppScreen.DATA_SISWA),
+            DrawerMenuItem("Data Guru", Icons.Default.Person, AppScreen.DATA_GURU),
             DrawerMenuItem("Data Kelas", Icons.Default.Class, AppScreen.DATA_KELAS),
             DrawerMenuItem("Mata Pelajaran", Icons.Default.Book, AppScreen.DATA_MAPEL),
             DrawerMenuItem("Jadwal Pelajaran", Icons.Default.CalendarMonth, AppScreen.JADWAL_PELAJARAN),
-            DrawerMenuItem("Sesi Absensi Guru", Icons.Default.AssignmentTurnedIn, AppScreen.SESI_ABSENSI),
-            DrawerMenuItem("Scan QR Presensi", Icons.Default.QrCodeScanner, AppScreen.SCAN_QR),
             DrawerMenuItem("Kartu QR Siswa", Icons.Default.QrCode, AppScreen.QR_SISWA),
             DrawerMenuItem("Riwayat Presensi", Icons.Default.Assignment, AppScreen.PRESENSI),
             DrawerMenuItem("Laporan & Rekap", Icons.Default.Assessment, AppScreen.LAPORAN),
@@ -212,7 +239,7 @@ fun MainAppScaffold(viewModel: MainViewModel) {
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
-                drawerContainerColor = Color.White,
+                drawerContainerColor = BrandSurface,
                 modifier = Modifier
                     .width(300.dp)
                     .fillMaxHeight()
@@ -222,30 +249,45 @@ fun MainAppScaffold(viewModel: MainViewModel) {
                         .fillMaxSize()
                         .padding(horizontal = 16.dp, vertical = 20.dp)
                 ) {
-                    // Header Drawer
+                    // Header Drawer with TriTech Branding
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Image(
-                                painter = painterResource(R.drawable.tritech_logo),
-                                contentDescription = "Logo TriTech",
-                                modifier = Modifier.size(42.dp)
-                            )
+                            Surface(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(10.dp)),
+                                color = BrandGreenContainer,
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Image(
+                                        painter = painterResource(R.drawable.tritech_logo),
+                                        contentDescription = "Logo TriTech",
+                                        modifier = Modifier.size(34.dp)
+                                    )
+                                }
+                            }
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
                                     text = "TRITECH",
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = FontWeight.ExtraBold,
                                     fontSize = 15.sp,
-                                    color = Color(0xFF0F172A)
+                                    color = BrandGreenDark,
+                                    letterSpacing = 1.sp
                                 )
                                 Text(
                                     text = "School Attendance System",
                                     fontSize = 11.sp,
-                                    color = Color(0xFF64748B)
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = BrandMagenta
                                 )
                             }
                         }
@@ -256,19 +298,21 @@ fun MainAppScaffold(viewModel: MainViewModel) {
                             Icon(
                                 Icons.Default.Close,
                                 contentDescription = "Tutup",
-                                tint = Color(0xFF64748B)
+                                tint = BrandMuted
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Divider(color = BorderLight, thickness = 1.dp)
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
+                    Divider(color = BrandBorder, thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     // Menu items list
                     Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(androidx.compose.foundation.rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         drawerMenuItems.forEach { item ->
                             val isSelected = currentScreen == item.screen
@@ -281,76 +325,95 @@ fun MainAppScaffold(viewModel: MainViewModel) {
                                         scope.launch { drawerState.close() }
                                     },
                                 shape = RoundedCornerShape(12.dp),
-                                color = if (isSelected) PrimaryBlue else Color.Transparent
+                                color = if (isSelected) BrandGreen else Color.Transparent
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                        .padding(horizontal = 14.dp, vertical = 11.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
                                         imageVector = item.icon,
                                         contentDescription = item.title,
-                                        tint = if (isSelected) Color.White else Color(0xFF475569),
+                                        tint = if (isSelected) Color.White else BrandTextSecondary,
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Spacer(modifier = Modifier.width(14.dp))
                                     Text(
                                         text = item.title,
-                                        fontSize = 14.sp,
+                                        fontSize = 13.sp,
                                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                                        color = if (isSelected) Color.White else Color(0xFF1E293B)
+                                        color = if (isSelected) Color.White else BrandText
                                     )
                                 }
                             }
                         }
                     }
 
-                    Divider(color = BorderLight, thickness = 1.dp)
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Divider(color = BrandBorder, thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    // Footer Drawer: User Profile
+                    // Footer Drawer: User Profile & Quick Logout
                     val userInitial = currentUser.nama.firstOrNull()?.uppercaseChar()?.toString() ?: "U"
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color(0xFFF8FAFC))
-                            .clickable {
-                                viewModel.navigateTo(AppScreen.PROFIL)
-                                scope.launch { drawerState.close() }
-                            }
-                            .padding(12.dp),
+                            .border(1.dp, BrandBorder, RoundedCornerShape(12.dp))
+                            .padding(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
+                                .size(36.dp)
                                 .clip(CircleShape)
-                                .background(PrimaryBlue),
+                                .background(BrandGreen),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = userInitial,
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp
+                                fontSize = 14.sp
                             )
                         }
                         Spacer(modifier = Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable {
+                                    viewModel.navigateTo(AppScreen.PROFIL)
+                                    scope.launch { drawerState.close() }
+                                }
+                        ) {
                             Text(
-                                text = currentUser.nama.uppercase(),
+                                text = currentUser.nama,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
-                                color = Color(0xFF0F172A),
+                                color = BrandText,
                                 maxLines = 1
                             )
                             Text(
                                 text = currentUser.role.replaceFirstChar { it.uppercase() },
                                 fontSize = 11.sp,
-                                color = Color(0xFF64748B)
+                                color = BrandMuted
+                            )
+                        }
+
+                        IconButton(
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                viewModel.logout()
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Logout,
+                                contentDescription = "Keluar",
+                                tint = BrandMagenta,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -370,33 +433,69 @@ fun MainAppScaffold(viewModel: MainViewModel) {
                             Icon(
                                 Icons.Default.Menu,
                                 contentDescription = "Menu Navigasi",
-                                tint = Color(0xFF0F172A)
+                                tint = BrandText
                             )
                         }
                     },
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Image(
-                                painter = painterResource(R.drawable.tritech_logo),
-                                contentDescription = "Logo TriTech",
-                                modifier = Modifier.size(36.dp)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Surface(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                color = BrandGreenContainer
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Image(
+                                        painter = painterResource(R.drawable.tritech_logo),
+                                        contentDescription = "Logo TriTech",
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
                             Column {
-                                Text(
-                                    text = "TRITECH",
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp
-                                    ),
-                                    color = Color(0xFF0F172A)
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "TRITECH",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 14.sp
+                                        ),
+                                        color = BrandGreenDark,
+                                        letterSpacing = 1.sp
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = when (currentUser.role) {
+                                            "siswa" -> BrandGreenContainer
+                                            "guru" -> BrandMagentaContainer
+                                            else -> Color(0xFFEFF6FF)
+                                        }
+                                    ) {
+                                        Text(
+                                            text = currentUser.role.uppercase(),
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = when (currentUser.role) {
+                                                "siswa" -> BrandGreenDark
+                                                "guru" -> BrandMagenta
+                                                else -> Color(0xFF1D4ED8)
+                                            },
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
                                 Text(
                                     text = "School Attendance System",
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        fontSize = 11.sp
+                                        fontSize = 10.sp
                                     ),
-                                    color = Color(0xFF64748B)
+                                    color = BrandMuted
                                 )
                             }
                         }
@@ -409,14 +508,14 @@ fun MainAppScaffold(viewModel: MainViewModel) {
                                 .clip(RoundedCornerShape(10.dp))
                                 .clickable { viewModel.navigateTo(AppScreen.SCAN_QR) }
                                 .testTag("topbar_quick_scan"),
-                            color = PrimaryBlue
+                            color = BrandGreen
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     Icons.Default.QrCodeScanner,
-                                    contentDescription = "Scan QR Cepat",
+                                    contentDescription = "Scan QR",
                                     tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(19.dp)
                                 )
                             }
                         }
@@ -429,7 +528,7 @@ fun MainAppScaffold(viewModel: MainViewModel) {
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(PrimaryBlue)
+                                .background(if (currentUser.role == "guru") BrandMagenta else BrandGreen)
                                 .clickable { viewModel.navigateTo(AppScreen.PROFIL) },
                             contentAlignment = Alignment.Center
                         ) {
@@ -437,33 +536,29 @@ fun MainAppScaffold(viewModel: MainViewModel) {
                                 text = userInitial,
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
+                                fontSize = 13.sp
                             )
                         }
 
                         Spacer(modifier = Modifier.width(12.dp))
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.White,
-                        titleContentColor = Color(0xFF0F172A)
+                        containerColor = BrandSurface,
+                        titleContentColor = BrandText
                     )
                 )
             },
             bottomBar = {
                 NavigationBar(
-                    containerColor = Color.White,
-                    tonalElevation = 8.dp
+                    containerColor = BrandSurface,
+                    tonalElevation = 6.dp
                 ) {
                     bottomNavItems.forEach { item ->
-                        val selected = !item.isMenuAction && currentScreen == item.screen
+                        val selected = currentScreen == item.screen
                         NavigationBarItem(
                             selected = selected,
                             onClick = {
-                                if (item.isMenuAction) {
-                                    scope.launch { drawerState.open() }
-                                } else if (item.screen != null) {
-                                    viewModel.navigateTo(item.screen)
-                                }
+                                viewModel.navigateTo(item.screen)
                             },
                             icon = {
                                 Icon(
@@ -476,15 +571,16 @@ fun MainAppScaffold(viewModel: MainViewModel) {
                                 Text(
                                     text = item.title,
                                     style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                                     maxLines = 1
                                 )
                             },
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = PrimaryBlue,
-                                selectedTextColor = PrimaryBlue,
-                                indicatorColor = Color(0xFFDBEAFE),
-                                unselectedIconColor = Color(0xFF64748B),
-                                unselectedTextColor = Color(0xFF64748B)
+                                selectedIconColor = BrandGreen,
+                                selectedTextColor = BrandGreen,
+                                indicatorColor = BrandGreenContainer,
+                                unselectedIconColor = BrandMuted,
+                                unselectedTextColor = BrandMuted
                             ),
                             modifier = Modifier.testTag("nav_${item.id}")
                         )

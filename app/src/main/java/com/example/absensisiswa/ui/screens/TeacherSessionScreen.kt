@@ -224,10 +224,14 @@ fun TeacherSessionScreen(
             item {
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Session Details & Geolocation Card
+                // Section 10 Header:
+                // X RPL 1
+                // Informatika
+                // Les 1
+                // 07:00–07:45
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -235,7 +239,7 @@ fun TeacherSessionScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp)
+                            .padding(18.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -244,83 +248,83 @@ fun TeacherSessionScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = classEntity?.namaKelas ?: "Kelas",
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold,
+                                    text = classEntity?.namaKelas ?: "X RPL 1",
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.ExtraBold,
                                     color = Color(0xFF0F172A)
                                 )
                                 Text(
-                                    text = "Guru: ${teacher?.nama ?: "Pak Adit"}",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium,
+                                    text = subject?.namaMataPelajaran ?: "Informatika",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
                                     color = PrimaryBlue
                                 )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Les ${session.lessonNumber} • ${session.startTime}–${session.endTime}",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF64748B)
+                                )
                             }
+
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = Color(0xFFF1F5F9),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight)
+                                color = if (isSessionOpen) Color(0xFFDCFCE7) else Color(0xFFF1F5F9)
                             ) {
                                 Text(
-                                    text = session.date,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFF475569),
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                    text = if (isSessionOpen) "DIBUKA" else "DITUTUP",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSessionOpen) StatusGreen else Color(0xFF64748B),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
                         Divider(color = BorderLight, thickness = 1.dp)
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
-                        // Geolocation Verification Pill
-                        val isLocVerified = session.locationVerified
-                        val dist = session.distanceFromSchool ?: 25f
-                        val locBg = if (isLocVerified) Color(0xFFF0FDF4) else Color(0xFFFEF2F2)
-                        val locBorder = if (isLocVerified) Color(0xFFBBF7D0) else Color(0xFFFECACA)
-                        val locText = if (isLocVerified) Color(0xFF15803D) else Color(0xFFDC2626)
+                        // Section 10 Summary:
+                        // Hadir 23 | Izin 1 | Sakit 0 | Alpa 1
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            SessionStatItem(label = "Hadir", count = hadirCount, color = StatusGreen, bgColor = Color(0xFFDCFCE7))
+                            SessionStatItem(label = "Izin", count = izinCount, color = StatusBlue, bgColor = Color(0xFFDBEAFE))
+                            SessionStatItem(label = "Sakit", count = sakitCount, color = StatusPurple, bgColor = Color(0xFFF3E8FF))
+                            SessionStatItem(label = "Alpa", count = alpaCount, color = StatusRed, bgColor = Color(0xFFFEE2E2))
+                        }
 
+                        // Simplified Geolocation info (Section 12)
+                        Spacer(modifier = Modifier.height(12.dp))
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = locBg,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, locBorder),
+                            color = Color(0xFFF0FDF4),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    Icons.Default.LocationOn,
-                                    contentDescription = null,
-                                    tint = locText,
-                                    modifier = Modifier.size(18.dp)
+                                Icon(Icons.Default.LocationOn, contentDescription = null, tint = StatusGreen, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "📍 Lokasi Terverifikasi • Berada di area sekolah",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF15803D)
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column {
-                                    Text(
-                                        text = if (isLocVerified) "✓ Lokasi Guru Terverifikasi di Area Sekolah" else "⚠ Di Luar Area Sekolah",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp,
-                                        color = locText
-                                    )
-                                    Text(
-                                        text = "Jarak dari sekolah: ${dist.toInt()} meter • Akurasi GPS: 8 meter",
-                                        fontSize = 11.sp,
-                                        color = Color(0xFF64748B)
-                                    )
-                                }
                             }
                         }
                     }
                 }
             }
 
-            // Quick Actions: Scan QR Siswa & Bulk set
+            // Section 10 Action Button:
+            // [ SCAN QR ]
             if (isSessionOpen) {
                 item {
                     Row(
@@ -331,25 +335,25 @@ fun TeacherSessionScreen(
                             onClick = { showScanDialog = true },
                             modifier = Modifier
                                 .weight(1f)
-                                .height(44.dp),
+                                .height(48.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
                         ) {
-                            Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(20.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Scan QR Siswa", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("SCAN QR", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
                         }
 
                         OutlinedButton(
                             onClick = { viewModel.setAllStudentsInActiveSession("HADIR") },
-                            modifier = Modifier.height(44.dp),
+                            modifier = Modifier.height(48.dp),
                             shape = RoundedCornerShape(12.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, StatusGreen),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusGreen)
                         ) {
                             Icon(Icons.Default.DoneAll, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Semua Hadir", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Semua Hadir", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -992,3 +996,39 @@ private fun SummaryRowItem(
         )
     }
 }
+
+@Composable
+private fun SessionStatItem(
+    label: String,
+    count: Int,
+    color: Color,
+    bgColor: Color
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(horizontal = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .background(bgColor),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = count.toString(),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFF475569)
+        )
+    }
+}
+

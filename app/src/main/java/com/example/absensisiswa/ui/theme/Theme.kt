@@ -13,34 +13,41 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val LightColorScheme = lightColorScheme(
-    primary = PrimaryBlue,
+    primary = BrandGreen,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFDBEAFE),
-    onPrimaryContainer = PrimaryBlueDark,
-    secondary = SecondaryTeal,
+    primaryContainer = BrandGreenContainer,
+    onPrimaryContainer = BrandGreenDark,
+    secondary = BrandMagenta,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFCCFBF1),
-    onSecondaryContainer = Color(0xFF134E4A),
-    background = BackgroundLight,
-    onBackground = TextPrimary,
-    surface = SurfaceLight,
-    onSurface = TextPrimary,
-    surfaceVariant = SurfaceVariantLight,
-    onSurfaceVariant = TextSecondary,
-    outline = BorderLight,
-    error = StatusRed,
-    onError = Color.White
+    secondaryContainer = BrandMagentaContainer,
+    onSecondaryContainer = BrandMagentaDark,
+    tertiary = BrandAccent,
+    onTertiary = Color.White,
+    background = BrandBackground,
+    onBackground = BrandText,
+    surface = BrandSurface,
+    onSurface = BrandText,
+    surfaceVariant = BrandSurfaceVariant,
+    onSurfaceVariant = BrandTextSecondary,
+    outline = BrandBorder,
+    outlineVariant = BrandBorder,
+    error = BrandError,
+    onError = Color.White,
+    errorContainer = BrandErrorBg,
+    onErrorContainer = BrandError
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryBlueLight,
+    primary = BrandGreenLight,
     onPrimary = Color.White,
-    primaryContainer = PrimaryBlueDark,
-    onPrimaryContainer = Color(0xFFDBEAFE),
-    secondary = SecondaryTealLight,
-    onSecondary = Color.Black,
-    secondaryContainer = Color(0xFF134E4A),
-    onSecondaryContainer = Color(0xFFCCFBF1),
+    primaryContainer = BrandGreenDark,
+    onPrimaryContainer = BrandGreenContainer,
+    secondary = BrandMagentaLight,
+    onSecondary = Color.White,
+    secondaryContainer = BrandMagentaDark,
+    onSecondaryContainer = BrandMagentaContainer,
+    tertiary = BrandAccentLight,
+    onTertiary = Color.Black,
     background = Color(0xFF0F172A),
     onBackground = Color(0xFFF8FAFC),
     surface = Color(0xFF1E293B),
@@ -63,7 +70,7 @@ fun AbsensiSiswaQRTheme(
         SideEffect {
             val window = (view.context as? Activity)?.window
             if (window != null) {
-                window.statusBarColor = colorScheme.primary.toArgb()
+                window.statusBarColor = BrandGreenDark.toArgb()
                 window.navigationBarColor = colorScheme.background.toArgb()
                 WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
                 WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme

@@ -127,19 +127,20 @@ fun StudentCardDialog(
                             Row(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Box(
+                                Surface(
                                     modifier = Modifier
                                         .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.2f)),
-                                    contentAlignment = Alignment.Center
+                                        .clip(CircleShape),
+                                    color = Color.White,
+                                    shape = CircleShape
                                 ) {
-                                    Icon(
-                                        Icons.Default.School,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(22.dp)
-                                    )
+                                    Box(contentAlignment = Alignment.Center) {
+                                        androidx.compose.foundation.Image(
+                                            painter = androidx.compose.ui.res.painterResource(com.example.absensisiswa.R.drawable.tritech_logo),
+                                            contentDescription = "Logo TriTech",
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
                                 }
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Column {
@@ -151,7 +152,7 @@ fun StudentCardDialog(
                                     )
                                     Text(
                                         text = "KARTU TANDA PELAJAR RESMI",
-                                        color = Color(0xFF93C5FD),
+                                        color = com.example.absensisiswa.ui.theme.BrandGreenContainer,
                                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
                                         fontSize = 10.sp
                                     )

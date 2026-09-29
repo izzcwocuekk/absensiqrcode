@@ -395,52 +395,45 @@ fun ScanScreen(
                                                     tint = Color(0xFF16A34A),
                                                     modifier = Modifier.size(20.dp)
                                                 )
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Text(
-                                                    text = "📍 Lokasi terdeteksi",
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 13.sp,
-                                                    color = Color(0xFF15803D)
-                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Column {
+                                                    Text(
+                                                        text = "📍 Lokasi Terverifikasi",
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 13.sp,
+                                                        color = Color(0xFF15803D)
+                                                    )
+                                                    Text(
+                                                        text = "Anda berada di area sekolah",
+                                                        fontSize = 12.sp,
+                                                        color = Color(0xFF166534)
+                                                    )
+                                                }
                                             }
 
                                             Surface(
-                                                shape = RoundedCornerShape(12.dp),
+                                                shape = RoundedCornerShape(8.dp),
                                                 color = Color(0xFFDCFCE7)
                                             ) {
                                                 Text(
-                                                    text = "✓ Di Area Sekolah",
+                                                    text = "DI SEKOLAH",
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = Color(0xFF16A34A),
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                                 )
                                             }
                                         }
 
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
+                                        // Diagnostic details only for admin
+                                        if (currentUser.role == "admin") {
+                                            Spacer(modifier = Modifier.height(4.dp))
                                             Text(
-                                                text = "Jarak dari sekolah: $dist meter",
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = Color(0xFF166534)
-                                            )
-                                            Text(
-                                                text = "Akurasi GPS: $acc meter",
-                                                fontSize = 12.sp,
-                                                color = Color(0xFF15803D)
+                                                text = "Admin Telemetri: Jarak $dist m • Akurasi ±$acc m",
+                                                fontSize = 10.sp,
+                                                color = Color(0xFF64748B)
                                             )
                                         }
-
-                                        Text(
-                                            text = "Status: ✓ Anda berada di area sekolah",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = Color(0xFF166534)
-                                        )
 
                                         // If student, provide direct Absen Sekarang button
                                         if (isStudent) {

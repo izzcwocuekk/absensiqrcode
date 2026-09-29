@@ -400,8 +400,8 @@ fun ProfileScreen(
                     Button(
                         onClick = {
                             showLogoutDialog = false
-                            viewModel.switchUserRole("siswa")
-                            Toast.makeText(context, "Sesi akun ditutup", Toast.LENGTH_SHORT).show()
+                            viewModel.logout()
+                            Toast.makeText(context, "Berhasil keluar dari akun", Toast.LENGTH_SHORT).show()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = StatusRed)
                     ) {

@@ -1,6 +1,8 @@
 package com.example.absensisiswa.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,16 +20,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Assignment
-import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.AssignmentTurnedIn
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Class
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
@@ -35,13 +37,10 @@ import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -58,25 +57,38 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.absensisiswa.R
 import com.example.absensisiswa.data.model.AttendanceWithDetails
 import com.example.absensisiswa.ui.AppScreen
 import com.example.absensisiswa.ui.MainViewModel
+import com.example.absensisiswa.ui.components.GeofenceStatusBadge
 import com.example.absensisiswa.ui.components.StatusBadge
 import com.example.absensisiswa.ui.components.StudentAvatar
 import com.example.absensisiswa.ui.components.StudentCardDialog
-import com.example.absensisiswa.ui.theme.BorderLight
-import com.example.absensisiswa.ui.theme.PrimaryBlue
-import com.example.absensisiswa.ui.theme.StatusBlue
-import com.example.absensisiswa.ui.theme.StatusGreen
-import com.example.absensisiswa.ui.theme.StatusOrange
-import com.example.absensisiswa.ui.theme.StatusPurple
-import com.example.absensisiswa.ui.theme.StatusRed
+import com.example.absensisiswa.ui.theme.BrandBorder
+import com.example.absensisiswa.ui.theme.BrandGreen
+import com.example.absensisiswa.ui.theme.BrandGreenContainer
+import com.example.absensisiswa.ui.theme.BrandGreenDark
+import com.example.absensisiswa.ui.theme.BrandMagenta
+import com.example.absensisiswa.ui.theme.BrandMagentaContainer
+import com.example.absensisiswa.ui.theme.BrandMuted
+import com.example.absensisiswa.ui.theme.BrandSurface
+import com.example.absensisiswa.ui.theme.BrandText
+import com.example.absensisiswa.ui.theme.BrandTextSecondary
+import com.example.absensisiswa.ui.theme.BrandSuccess
+import com.example.absensisiswa.ui.theme.BrandSuccessBg
+import com.example.absensisiswa.ui.theme.BrandWarning
+import com.example.absensisiswa.ui.theme.BrandWarningBg
+import com.example.absensisiswa.ui.theme.BrandError
+import com.example.absensisiswa.ui.theme.BrandErrorBg
+import com.example.absensisiswa.ui.theme.BrandInfo
+import com.example.absensisiswa.ui.theme.BrandInfoBg
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -98,7 +110,8 @@ fun DashboardScreen(
     val allSchedules by viewModel.allSchedules.collectAsState()
     val allSessions by viewModel.allSessions.collectAsState()
     val allClasses by viewModel.allClasses.collectAsState()
-    val isVerifyingLoc by viewModel.isVerifyingSessionLocation.collectAsState()
+    val allTeachers by viewModel.allTeachers.collectAsState()
+    val locationResult by viewModel.locationResult.collectAsState()
 
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     val greetingTime = when (hour) {
@@ -118,7 +131,7 @@ fun DashboardScreen(
     val isAdmin = currentUser.role == "admin"
     val teacherId = currentUser.teacherId ?: 1L
 
-    // If current user is student, identify matching student
+    // Student identification
     val currentStudent = remember(currentUser, allStudents) {
         if (isStudent) {
             allStudents.firstOrNull { it.student.id == currentUser.studentId }
@@ -126,35 +139,38 @@ fun DashboardScreen(
         } else null
     }
 
-    // Check if this student has attended today
+    // Student's attendance today
     val studentTodayAttendance = remember(currentStudent, recentAttendances) {
         if (currentStudent != null) {
             recentAttendances.firstOrNull { it.attendance.studentId == currentStudent.student.id }
         } else null
     }
 
+    // Teacher schedules for today
     val todayTeacherSchedules = remember(allSchedules, todayDayName, teacherId) {
         allSchedules.filter {
             it.schedule.day.equals(todayDayName, ignoreCase = true)
         }.sortedBy { it.schedule.lessonNumber }
     }
 
-    val activeSessionCount = remember(allSessions, todayDateStr) {
-        allSessions.count { it.session.date == todayDateStr && it.session.status == "DIBUKA" }
+    // Class schedules for current student
+    val studentClassId = currentStudent?.classEntity?.id ?: 1L
+    val studentTodaySchedules = remember(allSchedules, todayDayName, studentClassId) {
+        allSchedules.filter {
+            it.schedule.classId == studentClassId && it.schedule.day.equals(todayDayName, ignoreCase = true)
+        }.sortedBy { it.schedule.lessonNumber }
     }
 
-    val totalStudents = if (stats.totalStudents > 0) stats.totalStudents else 25
-    val percentNumber = if (totalStudents > 0) {
-        val totalHadirSemua = stats.hadir + stats.terlambat
-        ((totalHadirSemua.toFloat() / totalStudents.toFloat()) * 100).toInt()
-    } else 0
-
-    val progressFloat = (percentNumber / 100f).coerceIn(0f, 1f)
+    // Next lesson calculation for student
+    val nextLesson = remember(studentTodaySchedules) {
+        studentTodaySchedules.firstOrNull { it.schedule.lessonNumber > 1 }
+            ?: studentTodaySchedules.firstOrNull()
+    }
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFF8FAFC))
+            .background(Color(0xFFF7FAF8))
             .testTag("dashboard_screen")
     ) {
         LazyColumn(
@@ -163,102 +179,91 @@ fun DashboardScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
+            // ==========================================
+            // 8. DASHBOARD SISWA (SECTION 8)
+            // ==========================================
+            if (isStudent) {
+                item {
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                // Personalized Mobile Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        val displayName = if (isStudent) {
-                            currentUser.nama.split(" ").firstOrNull() ?: currentUser.nama
-                        } else {
-                            currentUser.nama
-                        }
-
-                        Text(
-                            text = "$greetingTime, $displayName",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                            color = Color(0xFF0F172A)
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = if (isStudent) {
-                                "${currentStudent?.classEntity?.namaKelas ?: "X RPL 1"} • NIS: ${currentStudent?.student?.nis ?: "R.0422.26"}"
-                            } else {
-                                "Berikut ringkasan kehadiran siswa hari ini."
-                            },
-                            fontSize = 13.sp,
-                            color = Color(0xFF64748B)
-                        )
-                    }
-
+                    // Header Siswa:
+                    // Logo / brand kecil
+                    // "Selamat pagi, [Nama]"
+                    // "X RPL 1"
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
                             modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .clickable { onNavigate(if (isStudent) AppScreen.PRESENSI else AppScreen.DATA_SISWA) },
-                            color = Color(0xFFF1F5F9),
-                            shape = CircleShape
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                            color = BrandGreenContainer,
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.Search,
-                                    contentDescription = "Cari",
-                                    tint = Color(0xFF475569),
-                                    modifier = Modifier.size(18.dp)
+                                Image(
+                                    painter = painterResource(R.drawable.tritech_logo),
+                                    contentDescription = "Logo TriTech",
+                                    modifier = Modifier.size(34.dp)
                                 )
                             }
                         }
 
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            val studentShortName = currentStudent?.student?.nama?.split(" ")?.firstOrNull()
+                                ?: currentUser.nama.split(" ").firstOrNull() ?: "Siswa"
+                            Text(
+                                text = "$greetingTime, $studentShortName",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = BrandText
+                            )
+                            Text(
+                                text = currentStudent?.classEntity?.namaKelas ?: "X RPL 1",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = BrandGreenDark
+                            )
+                        }
+
+                        // Quick QR card button
                         Surface(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(CircleShape)
-                                .clickable { onNavigate(AppScreen.PRESENSI) },
-                            color = Color(0xFFF1F5F9),
+                                .clickable {
+                                    if (currentStudent != null) {
+                                        viewModel.showStudentCard(currentStudent)
+                                    } else {
+                                        onNavigate(AppScreen.SCAN_QR)
+                                    }
+                                },
+                            color = BrandSurface,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BrandBorder),
                             shape = CircleShape
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
-                                    Icons.Default.Notifications,
-                                    contentDescription = "Pemberitahuan",
-                                    tint = Color(0xFF475569),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .align(Alignment.TopEnd)
-                                        .padding(top = 8.dp, end = 8.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFDC2626))
+                                    Icons.Default.QrCode,
+                                    contentDescription = "Kartu QR",
+                                    tint = BrandGreen,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
                     }
                 }
-            }
 
-            // ==========================================
-            // SISWA SPECIFIC DASHBOARD VIEW
-            // ==========================================
-            if (isStudent) {
-                // Today Attendance Status Card for Student
+                // STATUS ABSENSI HARI INI
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight),
+                        colors = CardDefaults.cardColors(containerColor = BrandSurface),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BrandBorder),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Column(
@@ -272,37 +277,36 @@ fun DashboardScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Status Kehadiran Hari Ini",
-                                    fontSize = 14.sp,
+                                    text = "STATUS ABSENSI HARI INI",
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF0F172A)
+                                    color = BrandMuted,
+                                    letterSpacing = 1.sp
                                 )
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = Color(0xFFF1F5F9)
-                                ) {
-                                    Text(
-                                        text = todayDateFormatted,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color(0xFF475569),
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
-                                }
+                                Text(
+                                    text = todayDateFormatted,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = BrandTextSecondary
+                                )
                             }
 
                             Spacer(modifier = Modifier.height(14.dp))
 
                             if (studentTodayAttendance != null) {
-                                // Already recorded
                                 val isLate = studentTodayAttendance.attendance.status.equals("Terlambat", true)
-                                val statusBg = if (isLate) Color(0xFFFEF3C7) else Color(0xFFDCFCE7)
-                                val statusColor = if (isLate) StatusOrange else StatusGreen
+                                val statusBg = if (isLate) BrandWarningBg else BrandSuccessBg
+                                val statusColor = if (isLate) BrandWarning else BrandSuccess
+                                val statusTitle = if (isLate) "TERLAMBAT" else "HADIR"
+                                val checkInTime = studentTodayAttendance.attendance.jamMasuk?.take(5) ?: "07:15"
 
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(46.dp)
+                                            .size(52.dp)
                                             .clip(CircleShape)
                                             .background(statusBg),
                                         contentAlignment = Alignment.Center
@@ -311,53 +315,62 @@ fun DashboardScreen(
                                             Icons.Default.CheckCircle,
                                             contentDescription = null,
                                             tint = statusColor,
-                                            modifier = Modifier.size(26.dp)
+                                            modifier = Modifier.size(30.dp)
                                         )
                                     }
-                                    Spacer(modifier = Modifier.width(12.dp))
+
+                                    Spacer(modifier = Modifier.width(14.dp))
+
                                     Column {
                                         Text(
-                                            text = if (isLate) "Tercatat Terlambat" else "Sudah Hadir Tepat Waktu",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 15.sp,
-                                            color = statusColor
+                                            text = statusTitle,
+                                            fontSize = 20.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = statusColor,
+                                            letterSpacing = 1.sp
                                         )
                                         Text(
-                                            text = "Pukul ${studentTodayAttendance.attendance.jamMasuk ?: "-"} WIB",
-                                            fontSize = 12.sp,
-                                            color = Color(0xFF64748B)
+                                            text = "$checkInTime WIB",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = BrandTextSecondary
                                         )
                                     }
                                 }
                             } else {
-                                // Not attended yet
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(46.dp)
+                                            .size(52.dp)
                                             .clip(CircleShape)
-                                            .background(Color(0xFFEFF6FF)),
+                                            .background(BrandGreenContainer),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             Icons.Default.Schedule,
                                             contentDescription = null,
-                                            tint = PrimaryBlue,
-                                            modifier = Modifier.size(24.dp)
+                                            tint = BrandGreen,
+                                            modifier = Modifier.size(28.dp)
                                         )
                                     }
-                                    Spacer(modifier = Modifier.width(12.dp))
+
+                                    Spacer(modifier = Modifier.width(14.dp))
+
                                     Column {
                                         Text(
-                                            text = "Belum Melakukan Presensi",
+                                            text = "BELUM ABSEN",
+                                            fontSize = 18.sp,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp,
-                                            color = Color(0xFF0F172A)
+                                            color = BrandText,
+                                            letterSpacing = 0.5.sp
                                         )
                                         Text(
-                                            text = "Batas masuk: ${settings?.schoolStartTime?.take(5) ?: "07:15"} WIB",
+                                            text = "Batas: ${settings?.schoolStartTime?.take(5) ?: "07:00"} WIB",
                                             fontSize = 12.sp,
-                                            color = Color(0xFF64748B)
+                                            color = BrandMuted
                                         )
                                     }
                                 }
@@ -365,56 +378,163 @@ fun DashboardScreen(
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            // Action Buttons for Student
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            // Simplified action button
+                            Button(
+                                onClick = { onNavigate(AppScreen.SCAN_QR) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(46.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = BrandGreen)
                             ) {
-                                Button(
-                                    onClick = { onNavigate(AppScreen.SCAN_QR) },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(42.dp),
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
-                                ) {
-                                    Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Buka Scanner", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                }
-
-                                if (currentStudent != null) {
-                                    OutlinedButton(
-                                        onClick = { viewModel.showStudentCard(currentStudent) },
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(42.dp),
-                                        shape = RoundedCornerShape(10.dp),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryBlue),
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryBlue)
-                                    ) {
-                                        Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Kartu QR Saya", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                    }
-                                }
+                                Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (studentTodayAttendance != null) "Scan Ulang / Presensi" else "Scan QR Absensi",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
                             }
                         }
                     }
                 }
 
-                // Student's Class Schedule for Today
+                // Mata Pelajaran Berikutnya: Kelas, Les, Jam
                 item {
-                    val studentClassId = currentStudent?.classEntity?.id ?: 1L
-                    val studentTodaySchedules = allSchedules.filter {
-                        it.schedule.classId == studentClassId && it.schedule.day.equals(todayDayName, ignoreCase = true)
-                    }.sortedBy { it.schedule.lessonNumber }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = BrandSurface),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BrandBorder),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp)
+                        ) {
+                            Text(
+                                text = "MATA PELAJARAN BERIKUTNYA",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = BrandMuted,
+                                letterSpacing = 1.sp
+                            )
 
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            if (nextLesson != null) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Surface(
+                                        modifier = Modifier
+                                            .size(46.dp)
+                                            .clip(RoundedCornerShape(12.dp)),
+                                        color = BrandMagentaContainer
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                Icons.Default.Book,
+                                                contentDescription = null,
+                                                tint = BrandMagenta,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.width(14.dp))
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = nextLesson.subject?.namaMataPelajaran ?: "Pelajaran",
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = BrandText
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "${nextLesson.classEntity?.namaKelas ?: "Kelas"} • Les ${nextLesson.schedule.lessonNumber} • ${nextLesson.schedule.startTime}–${nextLesson.schedule.endTime}",
+                                            fontSize = 12.sp,
+                                            color = BrandTextSecondary
+                                        )
+                                    }
+                                }
+                            } else {
+                                Text(
+                                    text = "Tidak ada jadwal pelajaran lanjutan hari ini.",
+                                    fontSize = 13.sp,
+                                    color = BrandMuted
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ==========================================
+            // 9. DASHBOARD GURU (SECTION 9)
+            // ==========================================
+            else if (isGuru) {
+                item {
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Header: "Selamat datang, Pak/Bu [Nama]" + Tanggal
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "Selamat datang, ${currentUser.nama}",
+                            fontSize = 19.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BrandText
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = todayIndonesianDate,
+                            fontSize = 13.sp,
+                            color = BrandMagenta,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
+                // JADWAL MENGAJAR HARI INI
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "JADWAL MENGAJAR HARI INI",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BrandMuted,
+                            letterSpacing = 1.sp
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = BrandGreenContainer
+                        ) {
+                            Text(
+                                text = "${todayTeacherSchedules.size} Sesi",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = BrandGreenDark,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+                }
+
+                items(todayTeacherSchedules) { sched ->
+                    val isLes1 = sched.schedule.lessonNumber == 1
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight),
+                        colors = CardDefaults.cardColors(containerColor = BrandSurface),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BrandBorder),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Column(
@@ -425,725 +545,269 @@ fun DashboardScreen(
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Jadwal Pelajaran Kelas Hari Ini",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF0F172A)
-                                )
-                                Text(
-                                    text = "${studentTodaySchedules.size} Pelajaran",
-                                    fontSize = 12.sp,
-                                    color = PrimaryBlue,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Divider(color = BorderLight)
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            if (studentTodaySchedules.isEmpty()) {
-                                Text(
-                                    text = "Tidak ada jadwal pelajaran hari ini",
-                                    fontSize = 12.sp,
-                                    color = Color(0xFF64748B)
-                                )
-                            } else {
-                                studentTodaySchedules.forEach { s ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 6.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Surface(
-                                                shape = RoundedCornerShape(6.dp),
-                                                color = Color(0xFFEFF6FF)
-                                            ) {
-                                                Text(
-                                                    text = "Les ${s.schedule.lessonNumber}",
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = PrimaryBlue,
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.width(10.dp))
-                                            Column {
-                                                Text(
-                                                    text = s.subject?.namaMataPelajaran ?: "Pelajaran",
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = Color(0xFF0F172A)
-                                                )
-                                                Text(
-                                                    text = "${s.teacher?.nama?.split(",")?.firstOrNull() ?: "Guru"} • ${s.schedule.startTime} - ${s.schedule.endTime}",
-                                                    fontSize = 11.sp,
-                                                    color = Color(0xFF64748B)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            } else if (isGuru) {
-                // ==========================================
-                // GURU DASHBOARD VIEW (Mobile-First)
-                // ==========================================
-                // Teacher Header Card with stats
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = PrimaryBlue),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(18.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.Top
                             ) {
                                 Column {
+                                    // 07:00
                                     Text(
-                                        text = "Dashboard Guru Pengampu",
-                                        color = Color(0xFFDBEAFE),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium
+                                        text = sched.schedule.startTime,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = BrandGreenDark
                                     )
+                                    // X RPL 1
                                     Text(
-                                        text = currentUser.nama,
-                                        color = Color.White,
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.Bold
+                                        text = sched.classEntity?.namaKelas ?: "Kelas",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = BrandText
+                                    )
+                                    // Informatika • Les 1
+                                    Text(
+                                        text = "${sched.subject?.namaMataPelajaran ?: "Pelajaran"} • Les ${sched.schedule.lessonNumber}",
+                                        fontSize = 13.sp,
+                                        color = BrandTextSecondary
                                     )
                                 }
+
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
-                                    color = Color.White.copy(alpha = 0.2f)
+                                    color = if (isLes1) BrandGreenContainer else Color(0xFFF1F5F9)
                                 ) {
                                     Text(
-                                        text = todayIndonesianDate.split(",").firstOrNull() ?: "Hari Ini",
-                                        color = Color.White,
+                                        text = if (isLes1) "Sesi Aktif" else "Terjadwal",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
+                                        color = if (isLes1) BrandGreenDark else BrandMuted,
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                     )
                                 }
                             }
 
                             Spacer(modifier = Modifier.height(14.dp))
-                            Divider(color = Color.White.copy(alpha = 0.2f), thickness = 1.dp)
-                            Spacer(modifier = Modifier.height(14.dp))
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                            // [ BUKA ABSENSI ]
+                            Button(
+                                onClick = {
+                                    viewModel.openSession(sched, context)
+                                    onNavigate(AppScreen.SESI_ABSENSI)
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(44.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = BrandGreen)
                             ) {
-                                Column {
-                                    Text(text = "JADWAL HARI INI", color = Color(0xFFDBEAFE), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                    Text(text = "${todayTeacherSchedules.size} Les", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Column {
-                                    Text(text = "SESI AKTIF", color = Color(0xFFDBEAFE), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                    Text(text = "$activeSessionCount Sesi", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Column {
-                                    Text(text = "TOTAL KELAS", color = Color(0xFFDBEAFE), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                    Text(text = "${allClasses.size} Kelas", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                }
+                                Icon(Icons.Default.AssignmentTurnedIn, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "BUKA ABSENSI",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.5.sp
+                                )
                             }
                         }
                     }
                 }
+            }
 
-                // Section Header: Jadwal Mengajar Hari Ini
+            // ==========================================
+            // 13. ADMIN DASHBOARD (SECTION 13)
+            // ==========================================
+            else {
                 item {
+                    Spacer(modifier = Modifier.height(6.dp))
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Jadwal Mengajar Hari Ini",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF0F172A)
-                        )
-                        Text(
-                            text = "Lihat Semua >",
-                            fontSize = 12.sp,
-                            color = PrimaryBlue,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.clickable { onNavigate(AppScreen.JADWAL_PELAJARAN) }
-                        )
+                        Column {
+                            Text(
+                                text = "Dashboard Administrator",
+                                fontSize = 19.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = BrandText
+                            )
+                            Text(
+                                text = todayIndonesianDate,
+                                fontSize = 12.sp,
+                                color = BrandMuted
+                            )
+                        }
+
+                        // Geolocation status pill (Section 12)
+                        val locStatus = locationResult?.geofenceStatus?.name ?: "DI_SEKOLAH"
+                        GeofenceStatusBadge(status = locStatus)
                     }
                 }
 
-                // List of Teaching Schedule Cards for Today
-                if (todayTeacherSchedules.isEmpty()) {
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(36.dp))
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "Tidak ada jadwal mengajar pada hari $todayDayName",
-                                    color = Color(0xFF64748B),
-                                    fontSize = 13.sp
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    items(todayTeacherSchedules) { schedWithDetails ->
-                        val sched = schedWithDetails.schedule
-                        val subj = schedWithDetails.subject
-                        val cls = schedWithDetails.classEntity
-                        val tch = schedWithDetails.teacher
-
-                        val existingSession = allSessions.firstOrNull {
-                            it.session.scheduleId == sched.id && it.session.date == todayDateStr
-                        }
-
-                        val isMySchedule = sched.teacherId == teacherId
-
-                        ScheduleCardItem(
-                            schedule = schedWithDetails,
-                            existingSession = existingSession,
-                            isMySchedule = isMySchedule,
-                            isVerifyingLoc = isVerifyingLoc,
-                            onOpenSession = {
-                                viewModel.openSession(schedWithDetails, context)
-                            },
-                            onContinueSession = { sId ->
-                                viewModel.selectSession(sId)
-                            }
-                        )
-                    }
-                }
-
-                // Quick Navigation Shortcuts for Teacher
+                // 4 Mobile Metrics Cards: Siswa, Guru, Kelas, Absensi Hari Ini
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { onNavigate(AppScreen.JADWAL_PELAJARAN) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(44.dp),
-                            shape = RoundedCornerShape(10.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF0F172A))
-                        ) {
-                            Icon(Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Jadwal Seminggu", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                        }
-
-                        OutlinedButton(
-                            onClick = { onNavigate(AppScreen.PRESENSI) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(44.dp),
-                            shape = RoundedCornerShape(10.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF0F172A))
-                        ) {
-                            Icon(Icons.Default.Assignment, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Riwayat Absensi", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                }
-            } else {
-                // ==========================================
-                // ADMIN DASHBOARD VIEW (2x2 STATS & MASTER DATA)
-                // ==========================================
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            DashboardStatCard(
-                                modifier = Modifier.weight(1f),
-                                title = "TOTAL SISWA",
-                                titleColor = Color(0xFF64748B),
-                                count = totalStudents.toString(),
-                                countColor = Color(0xFF0F172A),
-                                subtitle = "SMK Tritech",
+                            AdminMetricCard(
+                                title = "Siswa",
+                                count = "${allStudents.size}",
+                                subtitle = "Terdaftar",
                                 icon = Icons.Default.People,
-                                iconTint = PrimaryBlue,
-                                iconBg = Color(0xFFEFF6FF),
-                                onClick = { onNavigate(AppScreen.DATA_SISWA) }
+                                color = BrandGreen,
+                                bgColor = BrandGreenContainer,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onNavigate(AppScreen.DATA_SISWA) }
                             )
-
-                            DashboardStatCard(
-                                modifier = Modifier.weight(1f),
-                                title = "HADIR",
-                                titleColor = StatusGreen,
-                                count = stats.hadir.toString(),
-                                countColor = StatusGreen,
-                                subtitle = "Tepat waktu",
-                                icon = Icons.Default.CheckCircle,
-                                iconTint = StatusGreen,
-                                iconBg = Color(0xFFDCFCE7),
-                                onClick = { onNavigate(AppScreen.PRESENSI) }
+                            AdminMetricCard(
+                                title = "Guru",
+                                count = "${allTeachers.size.coerceAtLeast(4)}",
+                                subtitle = "Pengajar",
+                                icon = Icons.Default.Person,
+                                color = BrandMagenta,
+                                bgColor = BrandMagentaContainer,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onNavigate(AppScreen.DATA_GURU) }
                             )
                         }
 
-                        val tidakHadirCount = stats.izin + stats.sakit + stats.alpa
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            DashboardStatCard(
-                                modifier = Modifier.weight(1f),
-                                title = "TERLAMBAT",
-                                titleColor = StatusOrange,
-                                count = stats.terlambat.toString(),
-                                countColor = StatusOrange,
-                                subtitle = "Lewat ${settings?.schoolStartTime?.take(5) ?: "07:15"}",
-                                icon = Icons.Default.Schedule,
-                                iconTint = StatusOrange,
-                                iconBg = Color(0xFFFEF3C7),
-                                onClick = { onNavigate(AppScreen.PRESENSI) }
+                            AdminMetricCard(
+                                title = "Kelas",
+                                count = "${allClasses.size.coerceAtLeast(4)}",
+                                subtitle = "RPL & TKJ",
+                                icon = Icons.Default.Class,
+                                color = BrandInfo,
+                                bgColor = BrandInfoBg,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onNavigate(AppScreen.DATA_KELAS) }
                             )
-
-                            DashboardStatCard(
-                                modifier = Modifier.weight(1f),
-                                title = "TIDAK HADIR",
-                                titleColor = StatusRed,
-                                count = tidakHadirCount.toString(),
-                                countColor = StatusRed,
-                                subtitle = "Izin, Sakit, Alfa",
-                                icon = Icons.Default.Warning,
-                                iconTint = StatusRed,
-                                iconBg = Color(0xFFFEE2E2),
-                                onClick = { onNavigate(AppScreen.PRESENSI) }
+                            val totalHadir = stats.hadir + stats.terlambat
+                            AdminMetricCard(
+                                title = "Absensi Hari Ini",
+                                count = "$totalHadir",
+                                subtitle = "${stats.attendancePercentage.toInt()}% Hadir",
+                                icon = Icons.Default.AssignmentTurnedIn,
+                                color = BrandSuccess,
+                                bgColor = BrandSuccessBg,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onNavigate(AppScreen.PRESENSI) }
                             )
                         }
                     }
                 }
 
-                // Admin Master Data Management Shortcuts
-                item {
-                    Text(
-                        text = "Kelola Master Data Sekolah",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF0F172A)
-                    )
-                }
-
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Surface(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { onNavigate(AppScreen.DATA_GURU) },
-                            color = Color.White,
-                            shape = RoundedCornerShape(12.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFEFF6FF)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.Person, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(20.dp))
-                                }
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text("Data Guru", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-                            }
-                        }
-
-                        Surface(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { onNavigate(AppScreen.DATA_MAPEL) },
-                            color = Color.White,
-                            shape = RoundedCornerShape(12.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFF3E8FF)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.Book, contentDescription = null, tint = StatusPurple, modifier = Modifier.size(20.dp))
-                                }
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text("Mata Pelajaran", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-                            }
-                        }
-
-                        Surface(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { onNavigate(AppScreen.JADWAL_PELAJARAN) },
-                            color = Color.White,
-                            shape = RoundedCornerShape(12.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFDCFCE7)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = StatusGreen, modifier = Modifier.size(20.dp))
-                                }
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text("Jadwal", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-                            }
-                        }
-
-                        Surface(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { onNavigate(AppScreen.DATA_KELAS) },
-                            color = Color.White,
-                            shape = RoundedCornerShape(12.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFFEF3C7)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.Class, contentDescription = null, tint = StatusOrange, modifier = Modifier.size(20.dp))
-                                }
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text("Data Kelas", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-                            }
-                        }
-                    }
-                }
-
-                // Ringkasan Kehadiran Card
+                // STATUS ABSENSI: Hadir, Izin, Sakit, Alpa
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = BrandSurface),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BrandBorder),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(18.dp)
+                                .padding(16.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Ringkasan Kehadiran Hari Ini",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp,
-                                    color = Color(0xFF0F172A)
-                                )
-
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = Color(0xFFF1F5F9),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight)
-                                ) {
-                                    Text(
-                                        text = todayDateFormatted,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color(0xFF475569),
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            Row(verticalAlignment = Alignment.Bottom) {
-                                Text(
-                                    text = "$percentNumber%",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 28.sp,
-                                    color = Color(0xFF0F172A)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "dari $totalStudents siswa sudah absen hari ini",
-                                    fontSize = 13.sp,
-                                    color = Color(0xFF64748B),
-                                    modifier = Modifier.padding(bottom = 4.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            LinearProgressIndicator(
-                                progress = { progressFloat },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(8.dp)
-                                    .clip(RoundedCornerShape(4.dp)),
-                                color = StatusGreen,
-                                trackColor = Color(0xFFE2E8F0),
-                                strokeCap = StrokeCap.Round
+                            Text(
+                                text = "STATUS ABSENSI",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = BrandMuted,
+                                letterSpacing = 1.sp
                             )
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(14.dp))
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                MiniStatusChip(label = "Hadir", count = stats.hadir, color = StatusGreen, bg = Color(0xFFDCFCE7))
-                                MiniStatusChip(label = "Terlambat", count = stats.terlambat, color = StatusOrange, bg = Color(0xFFFEF3C7))
-                                MiniStatusChip(label = "Izin", count = stats.izin, color = StatusBlue, bg = Color(0xFFDBEAFE))
-                                MiniStatusChip(label = "Sakit", count = stats.sakit, color = StatusPurple, bg = Color(0xFFF3E8FF))
-                                MiniStatusChip(label = "Alfa", count = stats.alpa, color = StatusRed, bg = Color(0xFFFEE2E2))
+                                AttendanceStatusColumn("Hadir", "${stats.hadir}", BrandSuccess, BrandSuccessBg)
+                                AttendanceStatusColumn("Izin", "${stats.izin}", BrandInfo, BrandInfoBg)
+                                AttendanceStatusColumn("Sakit", "${stats.sakit}", BrandMagenta, BrandMagentaContainer)
+                                AttendanceStatusColumn("Alpa", "${stats.alpa}", BrandError, BrandErrorBg)
                             }
                         }
                     }
                 }
 
-                // Quick Scanner Banner
+                // Quick Admin Navigation Buttons
                 item {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onNavigate(AppScreen.SCAN_QR) },
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = PrimaryBlue),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(42.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(Color.White.copy(alpha = 0.2f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        Icons.Default.QrCodeScanner,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(14.dp))
-                                Column {
-                                    Text(
-                                        text = "Buka Scanner QR Siswa",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp,
-                                        color = Color.White
-                                    )
-                                    Text(
-                                        text = "Scan kartu atau foto QR kehadiran",
-                                        fontSize = 12.sp,
-                                        color = Color(0xFFDBEAFE)
-                                    )
-                                }
-                            }
-
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = Color.White
-                            ) {
-                                Text(
-                                    text = "Mulai",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp,
-                                    color = PrimaryBlue,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Recent Attendance Feed
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
                     Text(
-                        text = if (isStudent) "Riwayat Presensi Saya Terkini" else "Aktivitas Presensi Terkini",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF0F172A)
-                    )
-                    Text(
-                        text = "Lihat Semua >",
+                        text = "AKSES CEPAT",
                         fontSize = 12.sp,
-                        color = PrimaryBlue,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.clickable { onNavigate(AppScreen.PRESENSI) }
+                        fontWeight = FontWeight.Bold,
+                        color = BrandMuted,
+                        letterSpacing = 1.sp
                     )
-                }
-            }
 
-            val attendancesToDisplay = if (isStudent && currentStudent != null) {
-                recentAttendances.filter { it.attendance.studentId == currentStudent.student.id }
-            } else {
-                recentAttendances.take(5)
-            }
+                    Spacer(modifier = Modifier.height(8.dp))
 
-            if (attendancesToDisplay.isEmpty()) {
-                item {
-                    Card(
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                        Button(
+                            onClick = { onNavigate(AppScreen.SESI_ABSENSI) },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = BrandGreen)
                         ) {
-                            Icon(
-                                Icons.Default.Assignment,
-                                contentDescription = null,
-                                tint = Color(0xFF94A3B8),
-                                modifier = Modifier.size(36.dp)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Belum ada presensi tercatat hari ini",
-                                color = Color(0xFF64748B),
-                                fontSize = 13.sp
-                            )
+                            Icon(Icons.Default.AssignmentTurnedIn, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Sesi Absen", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
-                    }
-                }
-            } else {
-                items(attendancesToDisplay) { item ->
-                    val studentName = item.studentWithClass?.student?.nama ?: "Siswa"
-                    val className = item.studentWithClass?.classEntity?.namaKelas ?: "-"
-                    val gender = item.studentWithClass?.student?.jenisKelamin ?: "L"
 
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        OutlinedButton(
+                            onClick = { onNavigate(AppScreen.SCAN_QR) },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BrandGreen),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = BrandGreen)
                         ) {
-                            StudentAvatar(
-                                name = studentName,
-                                gender = gender,
-                                size = 40
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = studentName,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = Color(0xFF0F172A),
-                                    maxLines = 1
-                                )
-                                Text(
-                                    text = "$className • Jam ${item.attendance.jamMasuk ?: "-"} WIB",
-                                    fontSize = 11.sp,
-                                    color = Color(0xFF64748B)
-                                )
-                            }
-                            StatusBadge(status = item.attendance.status)
+                            Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Scan QR", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = { onNavigate(AppScreen.LAPORAN) },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = BrandMagenta)
+                        ) {
+                            Icon(Icons.Default.Assessment, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Laporan", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
 
             item {
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
 
-        // Student Card Dialog
+        // Student Card Dialog (if active)
         cardStudentToShow?.let { studentWithClass ->
             StudentCardDialog(
                 studentWithClass = studentWithClass,
                 schoolName = settings?.schoolName ?: "SMK TRITECH INFORMATIKA MEDAN",
                 onDismiss = { viewModel.showStudentCard(null) },
-                onRegenerateQr = if (currentUser.role == "admin") {
+                onRegenerateQr = if (isAdmin) {
                     { viewModel.regenerateQrToken(studentWithClass.student.id) }
                 } else null
             )
@@ -1152,109 +816,92 @@ fun DashboardScreen(
 }
 
 @Composable
-fun DashboardStatCard(
+private fun AdminMetricCard(
     title: String,
-    titleColor: Color,
     count: String,
-    countColor: Color,
     subtitle: String,
-    icon: ImageVector,
-    iconTint: Color,
-    iconBg: Color,
-    onClick: () -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color,
+    bgColor: Color,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+    Surface(
+        modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        color = BrandSurface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, BrandBorder)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp)
+            modifier = Modifier.padding(14.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = title,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = titleColor,
-                    letterSpacing = 0.5.sp
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = BrandTextSecondary
                 )
-
                 Box(
                     modifier = Modifier
-                        .size(30.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(iconBg),
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(bgColor),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = iconTint,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
                 }
             }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = count,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Bold,
-                color = countColor
+                fontSize = 22.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = BrandText
             )
-
-            Spacer(modifier = Modifier.height(2.dp))
-
             Text(
                 text = subtitle,
                 fontSize = 11.sp,
-                color = Color(0xFF94A3B8)
+                color = BrandMuted
             )
         }
     }
 }
 
 @Composable
-fun MiniStatusChip(
+private fun AttendanceStatusColumn(
     label: String,
-    count: Int,
+    count: String,
     color: Color,
-    bg: Color
+    bgColor: Color
 ) {
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = bg,
-        modifier = Modifier.padding(horizontal = 2.dp)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(horizontal = 6.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Box(
+            modifier = Modifier
+                .size(46.dp)
+                .clip(CircleShape)
+                .background(bgColor),
+            contentAlignment = Alignment.Center
         ) {
             Text(
-                text = label,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Medium,
-                color = color
-            )
-            Text(
-                text = count.toString(),
-                fontSize = 14.sp,
+                text = count,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = color
             )
         }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = BrandTextSecondary
+        )
     }
 }
